@@ -190,6 +190,37 @@
   .hidden{ display:none !important; }
   .empty-note{ color: var(--text-dim); font-size: 13px; padding: 10px 0; }
 
+  /* ---- Tierlist ---- */
+  .tier-row{
+    display:flex; align-items:stretch; gap: 0;
+    border: 1px solid var(--edge); border-radius: 10px;
+    overflow:hidden; margin-bottom: 10px;
+    background: var(--surface-2);
+  }
+  .tier-row-label{
+    flex: 0 0 74px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Cinzel', serif; font-weight:700; font-size: 30px;
+    color: #0a0a0c;
+  }
+  .tier-row-players{
+    flex: 1;
+    display:flex; flex-wrap:wrap; gap: 8px;
+    padding: 12px 14px;
+    align-items:center;
+  }
+  .tier-chip{
+    background: var(--surface);
+    border: 1px solid var(--edge-strong);
+    border-radius: 6px;
+    padding: 7px 13px;
+    font-family:'Oswald', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    letter-spacing: 0.01em;
+  }
+  .tier-row-empty{ color: rgba(255,255,255,0.25); font-size: 12.5px; font-style: italic; }
+
   /* ---- Animaciones y transiciones ---- */
   html{ scroll-behavior: smooth; }
   ::selection{ background: var(--silver-dim); color:#0a0a0c; }
@@ -260,6 +291,7 @@
     <button class="tab-btn" data-tab="goleadores">Goleadores</button>
     <button class="tab-btn" data-tab="asistidores">Asistidores</button>
     <button class="tab-btn" data-tab="partidos">Partidos</button>
+    <button class="tab-btn" data-tab="tierlist">Tierlist</button>
     <button class="tab-btn" data-tab="posiciones">Posiciones</button>
   </div>
 
@@ -351,6 +383,28 @@
       <h2>📅 Partidos</h2>
       <div id="partidosList"></div>
       <p class="empty-note hidden" id="partidosEmpty">Todavía no hay partidos cargados.</p>
+    </div>
+  </div>
+
+  <!-- ============ TIERLIST ============ -->
+  <div class="tab-panel hidden" id="tab-tierlist">
+    <div class="panel" style="width:min(1000px,96vw);">
+      <h2>📊 Tierlist</h2>
+      <div id="tierlistRows"></div>
+      <p class="empty-note hidden" id="tierlistEmpty">Todavía no se cargó la tierlist.</p>
+    </div>
+
+    <div class="panel admin-only">
+      <h2>✏️ Cargar tierlist</h2>
+      <div class="admin-block">
+        <label>Una línea por jugador, formato <code>Nombre: Tier</code> (A, B, C, D o E)</label>
+        <textarea id="tierlistInput" placeholder="Biccante: A
+rr: B
+BRAX!: C"></textarea>
+        <div style="margin-top:12px;">
+          <button class="btn" id="saveTierlistBtn">Guardar tierlist</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -473,6 +527,7 @@ function renderAll(){
   renderPartidosSelects();
   renderPartidos();
   renderPosiciones();
+  renderTierlist();
 }
 
 /* ---------------- HOME ---------------- */
@@ -723,6 +778,78 @@ function attachMatchAdminHandlers(){
     });
   });
 }
+
+/* ---------------- TIERLIST ---------------- */
+const TIER_COLORS = { A: 'var(--tierA)', B: 'var(--tierB)', C: 'var(--tierC)', D: 'var(--tierD)', E: 'var(--tierE)' };
+const TIER_ORDER_LIST = ['A', 'B', 'C', 'D', 'E'];
+
+function renderTierlist(){
+  const container = document.getElementById('tierlistRows');
+  const emptyEl = document.getElementById('tierlistEmpty');
+  const tierlist = torneoState.tierlist || {};
+  const names = Object.keys(tierlist);
+
+  if (names.length === 0) {
+    container.innerHTML = '';
+    emptyEl.classList.remove('hidden');
+    if (isAdmin) prefillTierlistInput('');
+    return;
+  }
+  emptyEl.classList.add('hidden');
+
+  container.innerHTML = TIER_ORDER_LIST.map((t, i) => {
+    const players = names.filter((n) => tierlist[n].tier === t)
+      .sort((a, b) => tierlist[a].order - tierlist[b].order);
+    const chips = players.length
+      ? players.map((n) => `<span class="tier-chip">${tierlist[n].name}</span>`).join('')
+      : '<span class="tier-row-empty">Sin jugadores</span>';
+    return `
+      <div class="tier-row row-enter" style="animation-delay:${i * 60}ms">
+        <div class="tier-row-label" style="background:${TIER_COLORS[t]}">${t}</div>
+        <div class="tier-row-players">${chips}</div>
+      </div>`;
+  }).join('');
+
+  if (isAdmin) {
+    const asText = names
+      .sort((a, b) => tierlist[a].order - tierlist[b].order)
+      .map((n) => `${tierlist[n].name}: ${tierlist[n].tier}`)
+      .join('\n');
+    prefillTierlistInput(asText);
+  }
+}
+
+function prefillTierlistInput(text){
+  const input = document.getElementById('tierlistInput');
+  if (input && document.activeElement !== input && input.value.trim() === '') {
+    input.value = text;
+  }
+}
+
+document.getElementById('saveTierlistBtn').addEventListener('click', () => {
+  const raw = document.getElementById('tierlistInput').value.trim();
+  if (!raw) {
+    showToast('Pegá la lista primero.', 'error');
+    return;
+  }
+  const tierlist = {};
+  let order = 0;
+  raw.split('\n').forEach((line) => {
+    const match = line.match(/^\s*(.+?)\s*[:\-]\s*([A-Ea-e])\s*$/);
+    if (!match) return;
+    const name = match[1].trim();
+    const tier = match[2].toUpperCase();
+    if (name && TIER_ORDER_LIST.includes(tier)) {
+      tierlist[sanitizeKey(name)] = { name, tier, order: order++ };
+    }
+  });
+  if (order === 0) {
+    showToast('No se reconoció ningún jugador. Formato: Nombre: Tier', 'error');
+    return;
+  }
+  TORNEO_ROOT.child('tierlist').set(tierlist);
+  showToast(`Tierlist guardada: ${order} jugadores ✓`, 'success');
+});
 
 /* ---------------- POSICIONES ---------------- */
 function renderPosiciones(){
