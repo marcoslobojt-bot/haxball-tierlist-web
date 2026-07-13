@@ -1,17 +1,17 @@
-# Herramientas de tierlist — PRIME HAX
+# Sitio del torneo — PRIME HAX
 
-Dos páginas estáticas independientes, ambas sincronizadas en vivo entre
-todos los que las tengan abiertas al mismo tiempo, vía Firebase Realtime
-Database (el mismo sistema que usaste para la página del torneo):
+Tres páginas, todas sincronizadas en vivo vía Firebase Realtime Database:
 
-- **`revelado-tiers.html`** — revela uno por uno el tier de cada jugador
-  (sin armar equipos), tipo lotería.
-- **`draft-equipos.html`** — arma equipos sorteando por ruleta a qué equipo
-  va cada jugador, respetando que cada equipo complete 1 Tier A + 1 Tier B +
-  el resto de su plantel (C/D/E mezclados) antes de pasar a la siguiente
-  fase. Es la que arma el torneo de ejemplo con 8 equipos.
+- **`index.html`** — la home del sitio. Tiene pestañas: **Home** (intro y stats
+  del torneo), **Draft** (embebe el draft de equipos en vivo), **Goleadores**,
+  **Asistidores**, **Partidos** (por fecha) y **Posiciones** (tabla calculada
+  sola en base a los resultados cargados).
+- **`draft-equipos.html`** — el draft de equipos (también accesible como
+  pestaña dentro de `index.html`).
+- **`revelado-tiers.html`** — revelado de tiers uno por uno, herramienta
+  aparte, no está enlazada desde la home.
 
-Ambas comparten la misma config de Firebase — configurala una sola vez.
+Las tres comparten la misma config de Firebase — configurala una sola vez.
 
 ## 1. Firebase
 
@@ -163,3 +163,42 @@ equipos tienen el suyo, esos jugadores pasan automáticamente al pool de
 
 **Ojo:** no hagas doble click ni dispares otro sorteo mientras la ruleta
 sigue girando — el botón te avisa si intentás superponer sorteos.
+
+---
+
+## 6. Home del torneo (`index.html`)
+
+Es la página principal — la que le compartís a todo el mundo. Link admin:
+`index.html?admin=1` (mismo PIN que las demás).
+
+### Qué hay en cada pestaña
+
+- **Home**: nombre y descripción del torneo (editable por admin), cantidad
+  de equipos (se toma automático de los equipos cargados en el Draft),
+  partidos jugados/totales, goleador actual y próximo partido pendiente.
+- **Draft**: el draft de equipos embebido, en modo espectador. El link para
+  abrir el panel de admin del draft está justo debajo, en pestaña aparte.
+- **Goleadores / Asistidores**: tabla ordenada de mayor a menor. El
+  formulario de admin para cargar goles y asistencias toma los nombres
+  directo de los equipos ya armados en el Draft — no hay que retipear
+  nombres, elegís al jugador de una lista y cargás ambos números juntos.
+- **Partidos**: agrupados por fecha, con la fecha actual marcada. El admin
+  agrega partidos (fecha, local, visitante, horario opcional) y carga el
+  resultado con dos campos numéricos + "Guardar" en cada partido ya creado.
+  También se pueden borrar partidos cargados por error.
+- **Posiciones**: se calcula sola — no se carga a mano. Se arma a partir de
+  todos los partidos con resultado cargado (3 puntos por victoria, 1 por
+  empate), ordenada por puntos y luego diferencia de gol.
+
+### Orden recomendado para usarlo
+
+1. Primero cerrá el draft en `draft-equipos.html?admin=1` (los 8 equipos
+   tienen que estar armados, porque de ahí sale la lista de jugadores y
+   equipos que usan Partidos, Goleadores y Asistidores).
+2. En `index.html?admin=1`, pestaña **Home**, cargá el nombre/descripción.
+3. En **Partidos**, cargá el fixture completo (podés cargar todas las
+   fechas de una, con resultado vacío, y después ir completando resultado
+   partido a partido a medida que se juegan).
+4. Después de cada fecha, en **Goleadores**/**Asistidores** actualizás los
+   números de los jugadores que participaron.
+5. **Posiciones** se actualiza sola apenas cargás un resultado.
