@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PRIME HAX — Revelado de Tierlist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0d0d0d;
+    --card: #1a1a1a;
+    --card-edge: rgba(255,255,255,0.08);
+    --gold: #C9960A;
+    --text: #f5f5f5;
+    --text-dim: #9a9a9a;
+    --tierA: #9b59b6;
+    --tierB: #2ecc71;
+    --tierC: #e67e22;
+    --tierD: #d35400;
+    --tierE: #bdc3c7;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    min-height:100vh;
+    background: radial-gradient(circle at 50% 0%, #1c1c1c, var(--bg) 60%);
+    color: var(--text);
+    font-family: 'Oswald', sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: 32px 16px 80px;
+  }
+  h1{
+    font-family:'Anton', sans-serif;
+    letter-spacing: 0.06em;
+    font-size: clamp(28px, 5vw, 48px);
+    color: var(--gold);
+    margin: 0 0 4px;
+    text-align:center;
+  }
+  .subtitle{
+    color: var(--text-dim);
+    margin-bottom: 36px;
+    text-align:center;
+  }
+
+  /* ---- Reel / ruleta ---- */
+  .reel-wrap{
+    width: min(420px, 92vw);
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    border-radius: 16px;
+    padding: 28px;
+    text-align:center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .player-name{
+    font-family:'Anton', sans-serif;
+    font-size: clamp(24px, 6vw, 34px);
+    margin-bottom: 18px;
+    min-height: 40px;
+  }
+  .reel-window{
+    position: relative;
+    height: 90px;
+    overflow: hidden;
+    border-radius: 10px;
+    border: 2px solid var(--gold);
+    background: #050505;
+  }
+  .reel-window::before, .reel-window::after{
+    content:"";
+    position:absolute; left:0; right:0; height:30px;
+    z-index:2; pointer-events:none;
+  }
+  .reel-window::before{ top:0; background: linear-gradient(#050505, transparent); }
+  .reel-window::after{ bottom:0; background: linear-gradient(transparent, #050505); }
+  .reel{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .reel-item{
+    height: 90px;
+    min-height:90px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Anton', sans-serif;
+    font-size: 34px;
+    letter-spacing: 0.08em;
+  }
+  .tier-A{ color: var(--tierA); }
+  .tier-B{ color: var(--tierB); }
+  .tier-C{ color: var(--tierC); }
+  .tier-D{ color: var(--tierD); }
+  .tier-E{ color: var(--tierE); }
+
+  .status{
+    margin-top: 18px;
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+
+  /* ---- Resumen revelado ---- */
+  .summary{
+    margin-top: 44px;
+    width: min(720px, 94vw);
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+  }
+  .tier-card{
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    border-left: 4px solid var(--tier-color, var(--gold));
+    border-radius: 10px;
+    padding: 14px 18px;
+  }
+  .tier-card h3{
+    margin: 0 0 8px;
+    font-family:'Anton', sans-serif;
+    letter-spacing: 0.05em;
+  }
+  .tier-card ul{
+    margin:0; padding:0; list-style:none;
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ---- Admin panel ---- */
+  .admin{
+    margin-top: 48px;
+    width: min(560px, 94vw);
+    background: var(--card);
+    border: 1px dashed var(--card-edge);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .admin h2{
+    font-family:'Anton', sans-serif;
+    color: var(--gold);
+    font-size: 18px;
+    letter-spacing: 0.05em;
+    margin-top:0;
+  }
+  .admin textarea{
+    width:100%;
+    min-height: 160px;
+    background:#0d0d0d;
+    color: var(--text);
+    border: 1px solid var(--card-edge);
+    border-radius: 8px;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 13px;
+    resize: vertical;
+  }
+  .admin p.help{
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height:1.5;
+  }
+  .admin button{
+    background: var(--gold);
+    color: #0d0d0d;
+    border:none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-family:'Oswald', sans-serif;
+    font-weight:700;
+    letter-spacing: 0.03em;
+    cursor:pointer;
+    margin: 6px 8px 0 0;
+  }
+  .admin button.secondary{
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--card-edge);
+  }
+  .admin .row{ margin-top: 10px; }
+  #pinGate{
+    width: min(320px, 90vw);
+    margin: 48px auto 0;
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    border-radius: 12px;
+    padding: 20px;
+    text-align:center;
+  }
+  #pinGate input{
+    width:100%;
+    padding: 10px;
+    border-radius: 8px;
+    border:1px solid var(--card-edge);
+    background:#0d0d0d;
+    color:var(--text);
+    text-align:center;
+    font-size: 18px;
+    letter-spacing: 4px;
+    margin-bottom: 10px;
+  }
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+  <h1>🗳️ PRIME HAX — Revelado de Tierlist</h1>
+  <p class="subtitle">Cada jugador se revela en vivo para todos al mismo tiempo.</p>
+
+  <div class="reel-wrap">
+    <div class="player-name" id="playerName">Esperando al admin…</div>
+    <div class="reel-window">
+      <div class="reel" id="reel"></div>
+    </div>
+    <div class="status" id="statusLine"></div>
+  </div>
+
+  <div class="summary" id="summary"></div>
+
+  <!-- Panel de admin: solo aparece con ?admin=1 en la URL -->
+  <div class="admin hidden" id="adminPanel">
+    <h2>⚙️ Panel de admin</h2>
+    <p class="help">
+      Pegá una línea por jugador con el formato <code>Nombre: Tier</code> (A, B, C, D o E).
+      Podés copiar directamente del resumen que postea <code>!haxcerrar</code> en Discord,
+      solo respetando ese formato por línea.
+    </p>
+    <textarea id="dataInput" placeholder="Duko: B
+Paredes: B
+AmadeoNF: A
+Gustavito.OG: E"></textarea>
+    <div class="row">
+      <button id="loadBtn">Cargar resultados y barajar orden</button>
+      <button id="resetBtn" class="secondary">Reiniciar todo</button>
+    </div>
+    <div class="row">
+      <button id="revealBtn">🎬 Revelar siguiente</button>
+    </div>
+    <p class="help" id="adminStatus"></p>
+  </div>
+
+  <div id="pinGate" class="hidden">
+    <p>PIN de admin</p>
+    <input id="pinInput" type="password" maxlength="6" />
+    <button id="pinBtn">Entrar</button>
+  </div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* =========================================================================
+   1) CONFIGURACIÓN — completá con tu proyecto de Firebase antes de publicar.
+      Es el mismo tipo de config que usaste para la página del torneo.
+      (Firebase Console → Configuración del proyecto → tus apps → SDK config)
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_PROYECTO.firebaseapp.com",
+  databaseURL: "https://TU_PROYECTO-default-rtdb.firebaseio.com",
+  projectId: "TU_PROYECTO",
+  storageBucket: "TU_PROYECTO.appspot.com",
+  messagingSenderId: "TU_SENDER_ID",
+  appId: "TU_APP_ID"
+};
+
+// Cambiá este PIN antes de publicar (protege el panel de admin, no el reveal público).
+const ADMIN_PIN = "3156";
+
+// Duración de la animación de la ruleta por jugador (ms).
+const SPIN_DURATION = 4200;
+
+/* ========================================================================= */
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const ROOT = db.ref('ruleta');
+
+const TIERS = ['A', 'B', 'C', 'D', 'E'];
+const TIER_LABEL = { A: 'Tier A', B: 'Tier B', C: 'Tier C', D: 'Tier D', E: 'Tier E' };
+
+const playerNameEl = document.getElementById('playerName');
+const reelEl = document.getElementById('reel');
+const statusLineEl = document.getElementById('statusLine');
+const summaryEl = document.getElementById('summary');
+
+let currentState = null;
+let animatedForIndex = -1;
+
+// ---- Vista pública: escucha cambios en Firebase ----
+ROOT.on('value', (snap) => {
+  const state = snap.val();
+  currentState = state;
+  render(state);
+});
+
+function render(state) {
+  if (!state || !state.order || state.order.length === 0) {
+    playerNameEl.textContent = 'Esperando al admin…';
+    reelEl.innerHTML = '';
+    statusLineEl.textContent = '';
+    summaryEl.innerHTML = '';
+    return;
+  }
+
+  const { order, players, currentIndex, revealStartedAt } = state;
+  const total = order.length;
+  const idx = typeof currentIndex === 'number' ? currentIndex : -1;
+
+  // Resumen de lo ya revelado (0..idx inclusive si ya terminó de girar, o 0..idx-1 mientras gira el actual)
+  const now = Date.now();
+  const currentFinished = revealStartedAt ? (now - revealStartedAt) >= SPIN_DURATION : false;
+  const revealedCount = idx < 0 ? 0 : (currentFinished ? idx + 1 : idx);
+  renderSummary(order, players, revealedCount);
+
+  if (idx < 0) {
+    playerNameEl.textContent = `${total} jugadores listos. Esperando el primer revelado…`;
+    reelEl.innerHTML = '';
+    statusLineEl.textContent = '';
+    return;
+  }
+
+  const name = order[idx];
+  const targetTier = players[name];
+  playerNameEl.textContent = name;
+
+  if (idx <= animatedForIndex && currentFinished) {
+    // Ya se animó y terminó: mostrar resultado quieto.
+    showStill(targetTier);
+    statusLineEl.textContent = idx === total - 1
+      ? '🏁 Tierlist completa.'
+      : `Jugador ${idx + 1} de ${total}.`;
+    return;
+  }
+
+  const elapsed = revealStartedAt ? now - revealStartedAt : SPIN_DURATION;
+  if (elapsed >= SPIN_DURATION) {
+    showStill(targetTier);
+    statusLineEl.textContent = idx === total - 1
+      ? '🏁 Tierlist completa.'
+      : `Jugador ${idx + 1} de ${total}.`;
+  } else {
+    animatedForIndex = idx;
+    statusLineEl.textContent = 'Girando…';
+    spin(targetTier, SPIN_DURATION - elapsed);
+  }
+}
+
+function showStill(targetTier) {
+  reelEl.style.transition = 'none';
+  reelEl.style.transform = 'translateY(0)';
+  reelEl.innerHTML = `<div class="reel-item tier-${targetTier}">${TIER_LABEL[targetTier]}</div>`;
+}
+
+function spin(targetTier, duration) {
+  // Construye una tira larga de tiers al azar que termina en el tier objetivo.
+  const REPEATS = 24;
+  const sequence = [];
+  for (let i = 0; i < REPEATS; i++) {
+    sequence.push(TIERS[Math.floor(Math.random() * TIERS.length)]);
+  }
+  sequence.push(targetTier);
+
+  reelEl.innerHTML = sequence
+    .map((t) => `<div class="reel-item tier-${t}">${TIER_LABEL[t]}</div>`)
+    .join('');
+
+  const itemHeight = 90;
+  const finalOffset = (sequence.length - 1) * itemHeight;
+
+  reelEl.style.transition = 'none';
+  reelEl.style.transform = 'translateY(0)';
+  // Forzar reflow antes de animar
+  void reelEl.offsetHeight;
+
+  reelEl.style.transition = `transform ${duration}ms cubic-bezier(0.12, 0.75, 0.15, 1)`;
+  reelEl.style.transform = `translateY(-${finalOffset}px)`;
+}
+
+function renderSummary(order, players, revealedCount) {
+  const grouped = { A: [], B: [], C: [], D: [], E: [] };
+  for (let i = 0; i < revealedCount; i++) {
+    const name = order[i];
+    grouped[players[name]].push(name);
+  }
+  summaryEl.innerHTML = TIERS.map((t) => {
+    if (grouped[t].length === 0) return '';
+    return `
+      <div class="tier-card" style="--tier-color: var(--tier${t})">
+        <h3 class="tier-${t}">${TIER_LABEL[t]} — ${grouped[t].length}</h3>
+        <ul>${grouped[t].map((n) => `<li>${n}</li>`).join('')}</ul>
+      </div>`;
+  }).join('');
+}
+
+// Reintenta el render periódicamente para que el reloj local dispare
+// showStill() apenas termina la animación, aunque no llegue un nuevo evento de Firebase.
+setInterval(() => { if (currentState) render(currentState); }, 300);
+
+/* =========================================================================
+   2) PANEL DE ADMIN — solo visible con ?admin=1 en la URL, protegido por PIN.
+   ========================================================================= */
+const params = new URLSearchParams(window.location.search);
+if (params.get('admin') === '1') {
+  document.getElementById('pinGate').classList.remove('hidden');
+}
+
+document.getElementById('pinBtn').addEventListener('click', () => {
+  const val = document.getElementById('pinInput').value;
+  if (val === ADMIN_PIN) {
+    document.getElementById('pinGate').classList.add('hidden');
+    document.getElementById('adminPanel').classList.remove('hidden');
+  } else {
+    alert('PIN incorrecto');
+  }
+});
+
+document.getElementById('loadBtn').addEventListener('click', () => {
+  const raw = document.getElementById('dataInput').value.trim();
+  if (!raw) return;
+
+  const players = {};
+  raw.split('\n').forEach((line) => {
+    const match = line.match(/^\s*(.+?)\s*[:\-]\s*([A-Ea-e])\s*$/);
+    if (match) {
+      const name = match[1].trim();
+      const tier = match[2].toUpperCase();
+      if (name && TIERS.includes(tier)) players[name] = tier;
+    }
+  });
+
+  const names = Object.keys(players);
+  if (names.length === 0) {
+    document.getElementById('adminStatus').textContent = 'No se reconoció ningún jugador. Revisá el formato (Nombre: Tier).';
+    return;
+  }
+
+  // Barajar el orden de revelado
+  for (let i = names.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [names[i], names[j]] = [names[j], names[i]];
+  }
+
+  ROOT.set({
+    players,
+    order: names,
+    currentIndex: -1,
+    revealStartedAt: null,
+  });
+
+  document.getElementById('adminStatus').textContent = `Cargados ${names.length} jugadores. Listo para revelar.`;
+});
+
+document.getElementById('revealBtn').addEventListener('click', () => {
+  if (!currentState || !currentState.order) {
+    document.getElementById('adminStatus').textContent = 'Primero cargá los resultados.';
+    return;
+  }
+  const nextIndex = (typeof currentState.currentIndex === 'number' ? currentState.currentIndex : -1) + 1;
+  if (nextIndex >= currentState.order.length) {
+    document.getElementById('adminStatus').textContent = 'Ya se revelaron todos los jugadores.';
+    return;
+  }
+  ROOT.update({
+    currentIndex: nextIndex,
+    revealStartedAt: Date.now(),
+  });
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (!confirm('¿Reiniciar todo el revelado? Esto borra el progreso actual.')) return;
+  ROOT.set(null);
+  document.getElementById('dataInput').value = '';
+  document.getElementById('adminStatus').textContent = 'Reiniciado.';
+});
+</script>
+</body>
+</html>

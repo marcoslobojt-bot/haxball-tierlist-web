@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PRIME HAX — Draft de equipos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0d0d0d;
+    --card: #1a1a1a;
+    --card-edge: rgba(255,255,255,0.08);
+    --gold: #C9960A;
+    --text: #f5f5f5;
+    --text-dim: #9a9a9a;
+    --tierA: #9b59b6;
+    --tierB: #2ecc71;
+    --tierC: #e67e22;
+    --tierD: #d35400;
+    --tierE: #bdc3c7;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    min-height:100vh;
+    background: radial-gradient(circle at 50% 0%, #1c1c1c, var(--bg) 60%);
+    color: var(--text);
+    font-family: 'Oswald', sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: 32px 16px 80px;
+  }
+  h1{
+    font-family:'Anton', sans-serif;
+    letter-spacing: 0.06em;
+    font-size: clamp(26px, 5vw, 44px);
+    color: var(--gold);
+    margin: 0 0 4px;
+    text-align:center;
+  }
+  .subtitle{
+    color: var(--text-dim);
+    margin-bottom: 30px;
+    text-align:center;
+    max-width: 640px;
+  }
+
+  /* ---- Sorteo en curso ---- */
+  .draw-wrap{
+    width: min(440px, 94vw);
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    border-radius: 16px;
+    padding: 26px;
+    text-align:center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    margin-bottom: 36px;
+  }
+  .phase-label{
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .player-name{
+    font-family:'Anton', sans-serif;
+    font-size: clamp(22px, 6vw, 30px);
+    margin-bottom: 4px;
+  }
+  .player-tier-badge{
+    display:inline-block;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 100px;
+    margin-bottom: 16px;
+  }
+  .reel-window{
+    position: relative;
+    height: 70px;
+    overflow: hidden;
+    border-radius: 10px;
+    border: 2px solid var(--gold);
+    background: #050505;
+  }
+  .reel-window::before, .reel-window::after{
+    content:"";
+    position:absolute; left:0; right:0; height:22px;
+    z-index:2; pointer-events:none;
+  }
+  .reel-window::before{ top:0; background: linear-gradient(#050505, transparent); }
+  .reel-window::after{ bottom:0; background: linear-gradient(transparent, #050505); }
+  .reel{ display:flex; flex-direction:column; align-items:center; }
+  .reel-item{
+    height: 70px; min-height:70px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Anton', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.04em;
+    color: var(--gold);
+    padding: 0 10px;
+    text-align:center;
+  }
+  .status{ margin-top: 16px; color: var(--text-dim); font-size: 14px; }
+
+  /* ---- Grilla de equipos ---- */
+  .teams-grid{
+    width: min(1100px, 96vw);
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+  }
+  .team-card{
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .team-card h3{
+    margin: 0 0 10px;
+    font-family:'Anton', sans-serif;
+    font-size: 16px;
+    letter-spacing: 0.04em;
+    color: var(--gold);
+    text-align:center;
+  }
+  .slot{
+    background: #0d0d0d;
+    border: 1px dashed var(--card-edge);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    min-height: 20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .slot.filled{ border-style: solid; }
+  .slot .tier-tag{
+    font-size: 10px;
+    font-weight:700;
+    padding: 1px 6px;
+    border-radius: 100px;
+  }
+  .tier-A-bg{ background: var(--tierA); color:#fff; }
+  .tier-B-bg{ background: var(--tierB); color:#08210f; }
+  .tier-C-bg{ background: var(--tierC); color:#2a1400; }
+  .tier-D-bg{ background: var(--tierD); color:#fff; }
+  .tier-E-bg{ background: var(--tierE); color:#111; }
+  .tier-A-text{ color: var(--tierA); }
+  .tier-B-text{ color: var(--tierB); }
+  .tier-C-text{ color: var(--tierC); }
+  .tier-D-text{ color: var(--tierD); }
+  .tier-E-text{ color: var(--tierE); }
+
+  /* ---- Admin panel ---- */
+  .admin{
+    margin-top: 48px;
+    width: min(640px, 94vw);
+    background: var(--card);
+    border: 1px dashed var(--card-edge);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .admin h2{
+    font-family:'Anton', sans-serif;
+    color: var(--gold);
+    font-size: 18px;
+    letter-spacing: 0.05em;
+    margin-top:0;
+  }
+  .admin label{ font-size: 13px; color: var(--text-dim); display:block; margin: 14px 0 4px; }
+  .admin textarea, .admin input[type=number]{
+    width:100%;
+    background:#0d0d0d;
+    color: var(--text);
+    border: 1px solid var(--card-edge);
+    border-radius: 8px;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 13px;
+  }
+  .admin textarea{ min-height: 140px; resize: vertical; }
+  .admin input[type=number]{ width: 100px; }
+  .admin p.help{ color: var(--text-dim); font-size: 12px; line-height:1.5; }
+  .admin button{
+    background: var(--gold);
+    color: #0d0d0d;
+    border:none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-family:'Oswald', sans-serif;
+    font-weight:700;
+    letter-spacing: 0.03em;
+    cursor:pointer;
+    margin: 14px 8px 0 0;
+  }
+  .admin button.secondary{ background: transparent; color: var(--text); border: 1px solid var(--card-edge); }
+  .admin button:disabled{ opacity: 0.4; cursor: not-allowed; }
+  #pinGate{
+    width: min(320px, 90vw);
+    margin: 48px auto 0;
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    border-radius: 12px;
+    padding: 20px;
+    text-align:center;
+  }
+  #pinGate input{
+    width:100%; padding: 10px; border-radius: 8px;
+    border:1px solid var(--card-edge); background:#0d0d0d; color:var(--text);
+    text-align:center; font-size: 18px; letter-spacing: 4px; margin-bottom: 10px;
+  }
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+  <h1>🎲 PRIME HAX — Draft de equipos</h1>
+  <p class="subtitle">Cada jugador ya tiene su tier. La ruleta sortea a qué equipo se suma, respetando 1 Tier A y 1 Tier B por equipo antes de completar el resto.</p>
+
+  <div class="draw-wrap">
+    <div class="phase-label" id="phaseLabel">Esperando al admin…</div>
+    <div class="player-name" id="playerName">—</div>
+    <div class="player-tier-badge" id="playerTierBadge" style="display:none;"></div>
+    <div class="reel-window">
+      <div class="reel" id="reel"></div>
+    </div>
+    <div class="status" id="statusLine"></div>
+  </div>
+
+  <div class="teams-grid" id="teamsGrid"></div>
+
+  <!-- Panel de admin: solo con ?admin=1 en la URL -->
+  <div class="admin hidden" id="adminPanel">
+    <h2>⚙️ Panel de admin</h2>
+
+    <label>Nombres de los equipos (uno por línea)</label>
+    <textarea id="teamsInput" rows="8">Equipo 1
+Equipo 2
+Equipo 3
+Equipo 4
+Equipo 5
+Equipo 6
+Equipo 7
+Equipo 8</textarea>
+
+    <label>Jugadores por equipo (total, incluyendo el A y el B)</label>
+    <input type="number" id="rosterSizeInput" value="4" min="2" max="10" />
+
+    <label>Jugadores con su tier — formato <code>Nombre: Tier</code>, uno por línea</label>
+    <textarea id="playersInput" placeholder="Duko: B
+Paredes: B
+AmadeoNF: A
+Gustavito.OG: E"></textarea>
+    <p class="help">
+      Los tiers C, D y E se agrupan en un mismo pool para completar los lugares que sobran
+      en cada equipo, sorteados en orden aleatorio.
+    </p>
+
+    <div>
+      <button id="loadBtn">Cargar torneo</button>
+      <button id="resetBtn" class="secondary">Reiniciar todo</button>
+    </div>
+    <div>
+      <button id="drawBtn">🎬 Sortear siguiente</button>
+    </div>
+    <p class="help" id="adminStatus"></p>
+  </div>
+
+  <div id="pinGate" class="hidden">
+    <p>PIN de admin</p>
+    <input id="pinInput" type="password" maxlength="6" />
+    <button id="pinBtn">Entrar</button>
+  </div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* =========================================================================
+   CONFIGURACIÓN — completá con tu proyecto de Firebase antes de publicar
+   (podés reusar el mismo de la página del torneo o el de la ruleta de tiers).
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_PROYECTO.firebaseapp.com",
+  databaseURL: "https://TU_PROYECTO-default-rtdb.firebaseio.com",
+  projectId: "TU_PROYECTO",
+  storageBucket: "TU_PROYECTO.appspot.com",
+  messagingSenderId: "TU_SENDER_ID",
+  appId: "TU_APP_ID"
+};
+
+const ADMIN_PIN = "3156";       // cambiá esto antes de publicar
+const SPIN_DURATION = 3800;     // ms que gira la ruleta por sorteo
+
+/* ========================================================================= */
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const ROOT = db.ref('draftEquipos');
+
+const TIER_ORDER = ['A', 'B', 'C', 'D', 'E'];
+const RESTY_TIERS = ['C', 'D', 'E'];
+
+let state = null;
+
+ROOT.on('value', (snap) => {
+  state = snap.val();
+  render();
+});
+
+// ---- Render principal ----
+function render() {
+  const teamsGrid = document.getElementById('teamsGrid');
+  const phaseLabel = document.getElementById('phaseLabel');
+  const playerName = document.getElementById('playerName');
+  const badge = document.getElementById('playerTierBadge');
+  const reel = document.getElementById('reel');
+  const statusLine = document.getElementById('statusLine');
+
+  if (!state || !state.teams) {
+    phaseLabel.textContent = 'Esperando al admin…';
+    playerName.textContent = '—';
+    badge.style.display = 'none';
+    reel.innerHTML = '';
+    statusLine.textContent = '';
+    teamsGrid.innerHTML = '';
+    return;
+  }
+
+  const displayRosters = effectiveRosters();
+
+  // Grilla de equipos
+  teamsGrid.innerHTML = state.teams.map((team) => {
+    const roster = displayRosters[team] || [];
+    const slots = [];
+    for (let i = 0; i < state.rosterSize; i++) {
+      const p = roster[i];
+      if (p) {
+        slots.push(`<div class="slot filled"><span>${p.name}</span><span class="tier-tag tier-${p.tier}-bg">${p.tier}</span></div>`);
+      } else {
+        slots.push(`<div class="slot">—</div>`);
+      }
+    }
+    return `<div class="team-card"><h3>${team}</h3>${slots.join('')}</div>`;
+  }).join('');
+
+  const pending = state.pending;
+  const now = Date.now();
+  const elapsed = pending ? now - pending.startedAt : Infinity;
+  const spinning = pending && elapsed < SPIN_DURATION;
+
+  const phase = currentPhase();
+  const phaseNames = { A: 'Fase Tier A', B: 'Fase Tier B', REST: 'Completando equipos', DONE: 'Draft completo' };
+
+  if (pending) {
+    playerName.textContent = pending.name;
+    badge.style.display = 'inline-block';
+    badge.textContent = `Tier ${pending.tier}`;
+    badge.className = `player-tier-badge tier-${pending.tier}-bg`;
+
+    if (spinning) {
+      statusLine.textContent = 'Girando…';
+      if (state._animatedFor !== pending.name + pending.startedAt) {
+        spin(pending.team, SPIN_DURATION - elapsed);
+        state._animatedFor = pending.name + pending.startedAt;
+      }
+    } else {
+      reel.style.transition = 'none';
+      reel.style.transform = 'translateY(0)';
+      reel.innerHTML = `<div class="reel-item">${pending.team}</div>`;
+      statusLine.textContent = `Le tocó a ${pending.team}.`;
+    }
+  } else {
+    badge.style.display = 'none';
+    reel.innerHTML = '';
+  }
+
+  phaseLabel.textContent = phaseNames[phase] || '';
+
+  if (phase === 'DONE' && !pending) {
+    playerName.textContent = '🏁 Todos los equipos están completos';
+    statusLine.textContent = '';
+  } else if (!pending) {
+    playerName.textContent = '—';
+    statusLine.textContent = 'Listo para el próximo sorteo.';
+  }
+}
+
+// Rosters "efectivos" para mostrar: confirmados + el pending si ya terminó de girar
+function effectiveRosters() {
+  const copy = {};
+  state.teams.forEach((t) => { copy[t] = (state.confirmedRosters && state.confirmedRosters[t]) ? [...state.confirmedRosters[t]] : []; });
+  const pending = state.pending;
+  if (pending) {
+    const elapsed = Date.now() - pending.startedAt;
+    if (elapsed >= SPIN_DURATION) {
+      copy[pending.team] = copy[pending.team] || [];
+      copy[pending.team].push({ name: pending.name, tier: pending.tier });
+    }
+  }
+  return copy;
+}
+
+function currentPhase() {
+  if (!state.poolA || state.poolA.length > 0) return 'A';
+  if (!state.poolB || state.poolB.length > 0) return 'B';
+  if (!state.poolRest || state.poolRest.length > 0) return 'REST';
+  return 'DONE';
+}
+
+function spin(targetTeam, duration) {
+  const reel = document.getElementById('reel');
+  const REPEATS = 20;
+  const teams = state.teams;
+  const sequence = [];
+  for (let i = 0; i < REPEATS; i++) {
+    sequence.push(teams[Math.floor(Math.random() * teams.length)]);
+  }
+  sequence.push(targetTeam);
+
+  reel.innerHTML = sequence.map((t) => `<div class="reel-item">${t}</div>`).join('');
+  const itemHeight = 70;
+  const finalOffset = (sequence.length - 1) * itemHeight;
+
+  reel.style.transition = 'none';
+  reel.style.transform = 'translateY(0)';
+  void reel.offsetHeight;
+  reel.style.transition = `transform ${duration}ms cubic-bezier(0.12, 0.75, 0.15, 1)`;
+  reel.style.transform = `translateY(-${finalOffset}px)`;
+}
+
+setInterval(() => { if (state) render(); }, 300);
+
+/* =========================================================================
+   PANEL DE ADMIN
+   ========================================================================= */
+const params = new URLSearchParams(window.location.search);
+if (params.get('admin') === '1') {
+  document.getElementById('pinGate').classList.remove('hidden');
+}
+document.getElementById('pinBtn').addEventListener('click', () => {
+  if (document.getElementById('pinInput').value === ADMIN_PIN) {
+    document.getElementById('pinGate').classList.add('hidden');
+    document.getElementById('adminPanel').classList.remove('hidden');
+  } else {
+    alert('PIN incorrecto');
+  }
+});
+
+document.getElementById('loadBtn').addEventListener('click', () => {
+  const teams = document.getElementById('teamsInput').value
+    .split('\n').map((s) => s.trim()).filter(Boolean);
+  const rosterSize = parseInt(document.getElementById('rosterSizeInput').value, 10) || 4;
+
+  const raw = document.getElementById('playersInput').value.trim();
+  const poolA = [], poolB = [], poolRest = [];
+  raw.split('\n').forEach((line) => {
+    const match = line.match(/^\s*(.+?)\s*[:\-]\s*([A-Ea-e])\s*$/);
+    if (!match) return;
+    const name = match[1].trim();
+    const tier = match[2].toUpperCase();
+    if (tier === 'A') poolA.push(name);
+    else if (tier === 'B') poolB.push(name);
+    else if (RESTY_TIERS.includes(tier)) poolRest.push({ name, tier });
+  });
+
+  if (teams.length === 0) {
+    document.getElementById('adminStatus').textContent = 'Cargá al menos un equipo.';
+    return;
+  }
+  if (poolA.length === 0 && poolB.length === 0 && poolRest.length === 0) {
+    document.getElementById('adminStatus').textContent = 'No se reconoció ningún jugador. Revisá el formato (Nombre: Tier).';
+    return;
+  }
+
+  shuffle(poolA);
+  shuffle(poolB);
+  shuffle(poolRest);
+
+  const confirmedRosters = {};
+  teams.forEach((t) => { confirmedRosters[t] = []; });
+
+  ROOT.set({
+    teams,
+    rosterSize,
+    confirmedRosters,
+    poolA,
+    poolB,
+    poolRest,
+    pending: null,
+  });
+
+  document.getElementById('adminStatus').textContent =
+    `Cargado: ${teams.length} equipos · ${poolA.length} Tier A · ${poolB.length} Tier B · ${poolRest.length} resto.`;
+});
+
+document.getElementById('drawBtn').addEventListener('click', () => {
+  if (!state || !state.teams) {
+    document.getElementById('adminStatus').textContent = 'Primero cargá el torneo.';
+    return;
+  }
+
+  // Si hay un sorteo pendiente sin terminar de girar, no permitir superponer.
+  if (state.pending) {
+    const elapsed = Date.now() - state.pending.startedAt;
+    if (elapsed < SPIN_DURATION) {
+      document.getElementById('adminStatus').textContent = 'Esperá a que termine de girar la ruleta actual.';
+      return;
+    }
+    // Confirmar el pending anterior en confirmedRosters antes de seguir.
+    mergeCurrentPending();
+  }
+
+  const poolA = [...(state.poolA || [])];
+  const poolB = [...(state.poolB || [])];
+  const poolRest = [...(state.poolRest || [])];
+  const confirmedRosters = deepCopyRosters(state.confirmedRosters, state.teams);
+
+  // Mover excedentes de A/B a "resto" si ya no queda ningún equipo elegible.
+  reflowOverflow(poolA, 'A', confirmedRosters, poolRest);
+  reflowOverflow(poolB, 'B', confirmedRosters, poolRest);
+
+  let phase;
+  if (poolA.length > 0) phase = 'A';
+  else if (poolB.length > 0) phase = 'B';
+  else if (poolRest.length > 0) phase = 'REST';
+  else phase = 'DONE';
+
+  if (phase === 'DONE') {
+    ROOT.update({ confirmedRosters, poolA, poolB, poolRest, pending: null });
+    document.getElementById('adminStatus').textContent = 'Draft completo, no quedan jugadores por sortear.';
+    return;
+  }
+
+  let name, tier, eligible;
+  if (phase === 'A') {
+    name = poolA.shift();
+    tier = 'A';
+    eligible = state.teams.filter((t) => !confirmedRosters[t].some((p) => p.tier === 'A'));
+  } else if (phase === 'B') {
+    name = poolB.shift();
+    tier = 'B';
+    eligible = state.teams.filter((t) => !confirmedRosters[t].some((p) => p.tier === 'B'));
+  } else {
+    const entry = poolRest.shift();
+    name = entry.name;
+    tier = entry.tier;
+    eligible = state.teams.filter((t) => confirmedRosters[t].length < state.rosterSize);
+  }
+
+  if (eligible.length === 0) {
+    // Fallback de seguridad: cualquier equipo con lugar libre.
+    eligible = state.teams.filter((t) => confirmedRosters[t].length < state.rosterSize);
+    if (eligible.length === 0) eligible = state.teams;
+  }
+
+  const assignedTeam = eligible[Math.floor(Math.random() * eligible.length)];
+
+  ROOT.update({
+    confirmedRosters,
+    poolA, poolB, poolRest,
+    pending: { name, tier, team: assignedTeam, startedAt: Date.now() },
+  });
+
+  document.getElementById('adminStatus').textContent = `Sorteando a ${name} (Tier ${tier})…`;
+});
+
+function mergeCurrentPending() {
+  if (!state.pending) return;
+  const confirmedRosters = deepCopyRosters(state.confirmedRosters, state.teams);
+  const p = state.pending;
+  confirmedRosters[p.team] = confirmedRosters[p.team] || [];
+  confirmedRosters[p.team].push({ name: p.name, tier: p.tier });
+  state.confirmedRosters = confirmedRosters;
+  state.pending = null;
+}
+
+function reflowOverflow(pool, tierLetter, confirmedRosters, poolRest) {
+  const anyEligible = () => state.teams.some((t) => !confirmedRosters[t].some((p) => p.tier === tierLetter));
+  while (pool.length > 0 && !anyEligible()) {
+    const name = pool.shift();
+    poolRest.push({ name, tier: tierLetter });
+  }
+}
+
+function deepCopyRosters(rosters, teams) {
+  const copy = {};
+  teams.forEach((t) => { copy[t] = rosters && rosters[t] ? rosters[t].map((p) => ({ ...p })) : []; });
+  return copy;
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (!confirm('¿Reiniciar todo el draft? Esto borra el progreso actual.')) return;
+  ROOT.set(null);
+  document.getElementById('playersInput').value = '';
+  document.getElementById('adminStatus').textContent = 'Reiniciado.';
+});
+</script>
+</body>
+</html>
