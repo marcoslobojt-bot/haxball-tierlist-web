@@ -189,6 +189,61 @@
   }
   .hidden{ display:none !important; }
   .empty-note{ color: var(--text-dim); font-size: 13px; padding: 10px 0; }
+
+  /* ---- Animaciones y transiciones ---- */
+  html{ scroll-behavior: smooth; }
+  ::selection{ background: var(--silver-dim); color:#0a0a0c; }
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-track{ background: var(--bg); }
+  ::-webkit-scrollbar-thumb{ background: var(--edge-strong); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover{ background: var(--silver-dim); }
+
+  @keyframes fadeSlideUp{ from{ opacity:0; transform: translateY(14px); } to{ opacity:1; transform: translateY(0); } }
+  @keyframes fadeOutDown{ from{ opacity:1; transform: translateY(0); } to{ opacity:0; transform: translateY(-8px); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes popIn{ from{ opacity:0; transform: scale(0.94); } to{ opacity:1; transform: scale(1); } }
+  @keyframes logoGlow{
+    0%,100%{ filter: drop-shadow(0 10px 22px rgba(0,0,0,0.55)); }
+    50%{ filter: drop-shadow(0 10px 30px rgba(255,255,255,0.14)); }
+  }
+  @keyframes toastIn{ from{ opacity:0; transform: translateY(10px) scale(.95); } to{ opacity:1; transform: translateY(0) scale(1); } }
+  @keyframes toastOut{ to{ opacity:0; transform: translateY(-6px) scale(.97); } }
+
+  .brand-logo{ animation: popIn .6s cubic-bezier(.2,.8,.2,1) both, logoGlow 4s ease-in-out 1s infinite; }
+  h1{ animation: fadeSlideUp .6s cubic-bezier(.2,.8,.2,1) .08s both; }
+  .rule{ animation: fadeIn .8s ease .3s both; }
+  .tabs{ animation: fadeSlideUp .6s cubic-bezier(.2,.8,.2,1) .32s both; }
+
+  .tab-panel > .panel:nth-child(1){ animation: fadeSlideUp .5s cubic-bezier(.2,.8,.2,1) both; }
+  .tab-panel > .panel:nth-child(2){ animation: fadeSlideUp .5s cubic-bezier(.2,.8,.2,1) .08s both; }
+  .draft-embed-wrap{ animation: fadeSlideUp .5s cubic-bezier(.2,.8,.2,1) both; }
+
+  .panel-fade-out{ animation: fadeOutDown .18s ease both; }
+  .panel-fade-in{ animation: fadeSlideUp .42s cubic-bezier(.2,.8,.2,1) both; }
+
+  .row-enter{ animation: fadeSlideUp .35s cubic-bezier(.2,.8,.2,1) both; }
+
+  .toast-container{
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    display:flex; flex-direction:column; gap:8px; z-index:9999; align-items:center;
+    width: min(360px, 92vw);
+  }
+  .toast{
+    background: linear-gradient(160deg, var(--surface), var(--surface-2));
+    border: 1px solid var(--edge-strong);
+    color: var(--text);
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+    box-shadow: 0 16px 34px -12px rgba(0,0,0,0.7);
+    animation: toastIn .3s cubic-bezier(.2,.8,.2,1) both;
+    text-align:center;
+  }
+  .toast.success{ border-color: rgba(47,158,107,0.55); }
+  .toast.error{ border-color: rgba(217,117,106,0.55); }
+  .toast.fade-out{ animation: toastOut .25s ease forwards; }
 </style>
 </head>
 <body>
@@ -375,6 +430,41 @@ function getPartidosArray(){
   return Object.keys(obj).map((id) => ({ id, ...obj[id] }));
 }
 
+/* ---------------- Helpers de UI: toasts y números animados ---------------- */
+function showToast(message, type){
+  let container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const t = document.createElement('div');
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.textContent = message;
+  container.appendChild(t);
+  setTimeout(() => {
+    t.classList.add('fade-out');
+    setTimeout(() => t.remove(), 250);
+  }, 2600);
+}
+
+function animateNumber(el, to){
+  const from = parseInt(el.textContent, 10);
+  if (isNaN(from)) { el.textContent = to; return; }
+  if (from === to) { el.textContent = to; return; }
+  const duration = 550;
+  const start = performance.now();
+  function step(now){
+    const p = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(from + (to - from) * eased);
+    if (p < 1) requestAnimationFrame(step);
+    else el.textContent = to;
+  }
+  requestAnimationFrame(step);
+}
+
 function renderAll(){
   renderHome();
   renderStatsTable('goleadores', 'goles', document.getElementById('goleadoresTable').querySelector('tbody'), document.getElementById('goleadoresEmpty'));
@@ -394,12 +484,12 @@ function renderHome(){
   document.getElementById('homeDescripcion').textContent = info.descripcion || 'Todavía no se cargó una descripción para este torneo.';
 
   const teams = getTeams();
-  document.getElementById('statEquipos').textContent = teams.length || '—';
+  animateNumber(document.getElementById('statEquipos'), teams.length);
 
   const partidos = getPartidosArray();
   const jugados = partidos.filter((p) => p.golesLocal != null && p.golesVisitante != null);
-  document.getElementById('statPartidosJugados').textContent = jugados.length;
-  document.getElementById('statPartidosTotales').textContent = partidos.length;
+  animateNumber(document.getElementById('statPartidosJugados'), jugados.length);
+  animateNumber(document.getElementById('statPartidosTotales'), partidos.length);
 
   const stats = torneoState.stats || {};
   const goleadores = Object.keys(stats)
@@ -429,6 +519,7 @@ document.getElementById('saveInfoBtn').addEventListener('click', () => {
     nombre: document.getElementById('infoNombreInput').value.trim() || 'Torneo Prime Hax',
     descripcion: document.getElementById('infoDescInput').value.trim(),
   });
+  showToast('Información del torneo guardada ✓', 'success');
 });
 
 /* ---------------- GOLEADORES / ASISTIDORES ---------------- */
@@ -446,7 +537,7 @@ function renderStatsTable(kind, field, tbody, emptyEl){
   }
   emptyEl.classList.add('hidden');
   tbody.innerHTML = rows.map((r, i) => `
-    <tr>
+    <tr class="row-enter" style="animation-delay:${i * 35}ms">
       <td class="pos">${i + 1}</td>
       <td>${r.name}</td>
       <td>${r.equipo || '—'}</td>
@@ -495,6 +586,7 @@ function renderStatsForms(){
       TORNEO_ROOT.child('stats').child(sanitizeKey(name)).set({
         name, goles, asistencias, equipo: player ? player.team : '',
       });
+      showToast(`Estadística de ${name} guardada ✓`, 'success');
     });
   });
 }
@@ -528,7 +620,7 @@ function renderPartidosSelects(){
 document.getElementById('addPartidoBtn').addEventListener('click', () => {
   const teams = getTeams();
   if (teams.length === 0) {
-    alert('Todavía no hay equipos cargados (cargalos primero desde el Draft).');
+    showToast('Todavía no hay equipos cargados (cargalos primero desde el Draft).', 'error');
     return;
   }
   const fecha = parseInt(document.getElementById('partidoFechaInput').value, 10) || 1;
@@ -536,12 +628,13 @@ document.getElementById('addPartidoBtn').addEventListener('click', () => {
   const visitante = document.getElementById('partidoVisitanteInput').value;
   const horario = document.getElementById('partidoHorarioInput').value.trim();
   if (!local || !visitante || local === visitante) {
-    alert('Elegí dos equipos distintos.');
+    showToast('Elegí dos equipos distintos.', 'error');
     return;
   }
   TORNEO_ROOT.child('partidos').push({
     fecha, local, visitante, horario, golesLocal: null, golesVisitante: null,
   });
+  showToast(`Partido agregado: ${local} vs ${visitante} (Fecha ${fecha}) ✓`, 'success');
 });
 
 function renderPartidos(){
@@ -571,11 +664,11 @@ function renderPartidos(){
     return fechas[fechas.length - 1];
   })();
 
-  list.innerHTML = fechas.map((f) => {
+  list.innerHTML = fechas.map((f, fi) => {
     const tag = f === fechaActual ? '<span class="fecha-tag">Actual</span>' : '';
-    const matches = porFecha[f].map((p) => matchCardHtml(p)).join('');
+    const matches = porFecha[f].map((p, mi) => matchCardHtml(p, fi * 3 + mi)).join('');
     return `
-      <div class="fecha-heading"><h3>Fecha ${f}</h3>${tag}</div>
+      <div class="fecha-heading row-enter" style="animation-delay:${fi * 60}ms"><h3>Fecha ${f}</h3>${tag}</div>
       ${matches}
     `;
   }).join('');
@@ -583,7 +676,7 @@ function renderPartidos(){
   if (isAdmin) attachMatchAdminHandlers();
 }
 
-function matchCardHtml(p){
+function matchCardHtml(p, order){
   const jugado = p.golesLocal != null && p.golesVisitante != null;
   const scoreHtml = jugado
     ? `${p.golesLocal} - ${p.golesVisitante}`
@@ -597,7 +690,7 @@ function matchCardHtml(p){
       <button class="btn btn-small btn-danger deleteMatchBtn" data-id="${p.id}">Borrar</button>
     </span>`;
   return `
-    <div class="match-card">
+    <div class="match-card row-enter" style="animation-delay:${(order || 0) * 40}ms">
       <div class="match-teams">
         <span class="side">${p.local}</span>
         <span class="match-score">${scoreHtml}</span>
@@ -619,12 +712,14 @@ function attachMatchAdminHandlers(){
         golesLocal: gl === '' ? null : parseInt(gl, 10),
         golesVisitante: gv === '' ? null : parseInt(gv, 10),
       });
+      showToast('Resultado guardado ✓', 'success');
     });
   });
   document.querySelectorAll('.deleteMatchBtn').forEach((btn) => {
     btn.addEventListener('click', () => {
       if (!confirm('¿Borrar este partido?')) return;
       TORNEO_ROOT.child('partidos').child(btn.dataset.id).remove();
+      showToast('Partido borrado', 'success');
     });
   });
 }
@@ -673,7 +768,7 @@ function renderPosiciones(){
   }
 
   tbody.innerHTML = rows.map((r, i) => `
-    <tr class="${i === 0 && partidos.length > 0 ? 'leader' : ''}">
+    <tr class="row-enter ${i === 0 && partidos.length > 0 ? 'leader' : ''}" style="animation-delay:${i * 45}ms">
       <td class="pos">${i + 1}</td>
       <td>${r.equipo}</td>
       <td class="num">${r.pj}</td>
@@ -693,13 +788,33 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
   btn.addEventListener('click', () => showTab(btn.dataset.tab));
 });
 function showTab(id){
-  document.querySelectorAll('.tab-panel').forEach((p) => p.classList.add('hidden'));
-  document.getElementById('tab-' + id).classList.remove('hidden');
+  const next = document.getElementById('tab-' + id);
+  const current = Array.from(document.querySelectorAll('.tab-panel')).find((p) => !p.classList.contains('hidden'));
+
   document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === id));
   history.replaceState(null, '', '#' + id);
+
+  if (!current || current === next) {
+    document.querySelectorAll('.tab-panel').forEach((p) => p.classList.add('hidden'));
+    next.classList.remove('hidden');
+    return;
+  }
+
+  current.classList.add('panel-fade-out');
+  setTimeout(() => {
+    document.querySelectorAll('.tab-panel').forEach((p) => p.classList.add('hidden'));
+    current.classList.remove('panel-fade-out');
+    next.classList.remove('hidden');
+    next.classList.add('panel-fade-in');
+    setTimeout(() => next.classList.remove('panel-fade-in'), 450);
+  }, 160);
 }
 const initialTab = (location.hash || '#home').slice(1);
-if (document.getElementById('tab-' + initialTab)) showTab(initialTab);
+if (document.getElementById('tab-' + initialTab)) {
+  document.querySelectorAll('.tab-panel').forEach((p) => p.classList.add('hidden'));
+  document.getElementById('tab-' + initialTab).classList.remove('hidden');
+  document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === initialTab));
+}
 
 /* ---------------- Admin (PIN) ---------------- */
 const params = new URLSearchParams(window.location.search);
@@ -712,10 +827,12 @@ document.getElementById('pinBtn').addEventListener('click', () => {
     document.body.classList.add('is-admin');
     document.getElementById('pinGate').classList.add('hidden');
     renderAll();
+    showToast('Modo admin activado ✓', 'success');
   } else {
-    alert('PIN incorrecto');
+    showToast('PIN incorrecto', 'error');
   }
 });
+
 </script>
 </body>
 </html>

@@ -319,6 +319,59 @@
     text-align:center; font-size: 18px; letter-spacing: 6px; margin-bottom: 12px;
   }
   .hidden{ display:none !important; }
+
+  /* ---- Animaciones y transiciones ---- */
+  html{ scroll-behavior: smooth; }
+  ::selection{ background: var(--silver-dim); color:#0a0a0c; }
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-track{ background: var(--bg); }
+  ::-webkit-scrollbar-thumb{ background: var(--edge-strong); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover{ background: var(--silver-dim); }
+
+  @keyframes fadeSlideUp{ from{ opacity:0; transform: translateY(14px); } to{ opacity:1; transform: translateY(0); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes popIn{ from{ opacity:0; transform: scale(0.94); } to{ opacity:1; transform: scale(1); } }
+  @keyframes logoGlow{
+    0%,100%{ filter: drop-shadow(0 10px 22px rgba(0,0,0,0.55)); }
+    50%{ filter: drop-shadow(0 10px 30px rgba(255,255,255,0.14)); }
+  }
+  @keyframes landGlow{
+    0%{ box-shadow: inset 0 12px 20px -14px rgba(0,0,0,0.9), inset 0 -12px 20px -14px rgba(0,0,0,0.9), 0 0 0 0 rgba(255,255,255,0); }
+    35%{ box-shadow: inset 0 12px 20px -14px rgba(0,0,0,0.9), inset 0 -12px 20px -14px rgba(0,0,0,0.9), 0 0 26px 3px rgba(255,255,255,0.22); }
+    100%{ box-shadow: inset 0 12px 20px -14px rgba(0,0,0,0.9), inset 0 -12px 20px -14px rgba(0,0,0,0.9), 0 0 0 0 rgba(255,255,255,0); }
+  }
+  @keyframes toastIn{ from{ opacity:0; transform: translateY(10px) scale(.95); } to{ opacity:1; transform: translateY(0) scale(1); } }
+  @keyframes toastOut{ to{ opacity:0; transform: translateY(-6px) scale(.97); } }
+
+  .brand-logo{ animation: popIn .6s cubic-bezier(.2,.8,.2,1) both, logoGlow 4s ease-in-out 1s infinite; }
+  h1{ animation: fadeSlideUp .6s cubic-bezier(.2,.8,.2,1) .08s both; }
+  .rule{ animation: fadeIn .8s ease .3s both; }
+  .subtitle{ animation: fadeSlideUp .6s cubic-bezier(.2,.8,.2,1) .18s both; }
+  .draw-wrap{ animation: fadeSlideUp .55s cubic-bezier(.2,.8,.2,1) .1s both; }
+  .teams-grid{ animation: fadeSlideUp .5s cubic-bezier(.2,.8,.2,1) .15s both; }
+  .reel-window.landed{ animation: landGlow .9s ease; }
+
+  .toast-container{
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    display:flex; flex-direction:column; gap:8px; z-index:9999; align-items:center;
+    width: min(360px, 92vw);
+  }
+  .toast{
+    background: linear-gradient(160deg, var(--surface), var(--surface-2));
+    border: 1px solid var(--edge-strong);
+    color: var(--text);
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+    box-shadow: 0 16px 34px -12px rgba(0,0,0,0.7);
+    animation: toastIn .3s cubic-bezier(.2,.8,.2,1) both;
+    text-align:center;
+  }
+  .toast.success{ border-color: rgba(47,158,107,0.55); }
+  .toast.error{ border-color: rgba(217,117,106,0.55); }
+  .toast.fade-out{ animation: toastOut .25s ease forwards; }
 </style>
 </head>
 <body>
@@ -482,6 +535,13 @@ function render() {
       reel.style.transform = 'translateY(0)';
       reel.innerHTML = `<div class="reel-item">${pending.team}</div>`;
       statusLine.textContent = `Le tocó a ${pending.team}.`;
+      if (state._landedFor !== pending.name + pending.startedAt) {
+        state._landedFor = pending.name + pending.startedAt;
+        const reelWindow = document.querySelector('.reel-window');
+        reelWindow.classList.remove('landed');
+        void reelWindow.offsetWidth;
+        reelWindow.classList.add('landed');
+      }
     }
   } else {
     badge.style.display = 'none';
@@ -551,12 +611,31 @@ const params = new URLSearchParams(window.location.search);
 if (params.get('admin') === '1') {
   document.getElementById('pinGate').classList.remove('hidden');
 }
+function showToast(message, type){
+  let container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const t = document.createElement('div');
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.textContent = message;
+  container.appendChild(t);
+  setTimeout(() => {
+    t.classList.add('fade-out');
+    setTimeout(() => t.remove(), 250);
+  }, 2600);
+}
+
 document.getElementById('pinBtn').addEventListener('click', () => {
   if (document.getElementById('pinInput').value === ADMIN_PIN) {
     document.getElementById('pinGate').classList.add('hidden');
     document.getElementById('adminPanel').classList.remove('hidden');
+    showToast('Modo admin activado ✓', 'success');
   } else {
-    alert('PIN incorrecto');
+    showToast('PIN incorrecto', 'error');
   }
 });
 
@@ -605,6 +684,7 @@ document.getElementById('loadBtn').addEventListener('click', () => {
 
   document.getElementById('adminStatus').textContent =
     `Cargado: ${teams.length} equipos · ${poolA.length} Tier A · ${poolB.length} Tier B · ${poolRest.length} resto.`;
+  showToast('Torneo cargado ✓', 'success');
 });
 
 document.getElementById('drawBtn').addEventListener('click', () => {
