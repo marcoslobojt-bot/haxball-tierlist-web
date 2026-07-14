@@ -362,7 +362,7 @@
 
   <!-- Panel de admin: solo aparece con ?admin=1 en la URL -->
   <div class="admin hidden" id="adminPanel">
-    <h2>⚙️ Panel de admin</h2>
+    <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-2px;margin-right:6px"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/></svg>Panel de admin</h2>
     <p class="help">
       Pegá una línea por jugador con el formato <code>Nombre: Tier</code> (A, B, C, D o E).
       Podés copiar directamente del resumen que postea <code>!haxcerrar</code> en Discord,
@@ -377,7 +377,7 @@ Gustavito.OG: E"></textarea>
       <button id="resetBtn" class="secondary">Reiniciar todo</button>
     </div>
     <div class="row">
-      <button id="revealBtn">🎬 Revelar siguiente</button>
+      <button id="revealBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:6px"><polygon points="6,4 20,12 6,20"/></svg>Revelar siguiente</button>
     </div>
     <p class="help" id="adminStatus"></p>
   </div>
@@ -471,7 +471,7 @@ function render(state) {
     // Ya se animó y terminó: mostrar resultado quieto.
     showStill(targetTier, idx);
     statusLineEl.textContent = idx === total - 1
-      ? '🏁 Tierlist completa.'
+      ? 'Tierlist completa.'
       : `Jugador ${idx + 1} de ${total}.`;
     return;
   }
@@ -480,7 +480,7 @@ function render(state) {
   if (elapsed >= SPIN_DURATION) {
     showStill(targetTier, idx);
     statusLineEl.textContent = idx === total - 1
-      ? '🏁 Tierlist completa.'
+      ? 'Tierlist completa.'
       : `Jugador ${idx + 1} de ${total}.`;
   } else {
     animatedForIndex = idx;

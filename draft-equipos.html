@@ -397,7 +397,7 @@
 
   <!-- Panel de admin: solo con ?admin=1 en la URL -->
   <div class="admin hidden" id="adminPanel">
-    <h2>⚙️ Panel de admin</h2>
+    <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-2px;margin-right:6px"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/></svg>Panel de admin</h2>
 
     <label>Nombres de los equipos (uno por línea)</label>
     <textarea id="teamsInput" rows="8">Equipo 1
@@ -427,7 +427,7 @@ Gustavito.OG: E"></textarea>
       <button id="resetBtn" class="secondary">Reiniciar todo</button>
     </div>
     <div>
-      <button id="drawBtn">🎬 Sortear siguiente</button>
+      <button id="drawBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:6px"><polygon points="6,4 20,12 6,20"/></svg>Sortear siguiente</button>
     </div>
     <p class="help" id="adminStatus"></p>
   </div>
@@ -551,7 +551,7 @@ function render() {
   phaseLabel.textContent = phaseNames[phase] || '';
 
   if (phase === 'DONE' && !pending) {
-    playerName.textContent = '🏁 Todos los equipos están completos';
+    playerName.textContent = 'Todos los equipos están completos';
     statusLine.textContent = '';
   } else if (!pending) {
     playerName.textContent = '—';
