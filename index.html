@@ -304,6 +304,26 @@
   }
   #commentModal textarea{ min-height: 90px; resize: vertical; }
   .modal-actions{ display:flex; justify-content:flex-end; gap: 8px; margin-top: 18px; }
+  .auth-error{
+    background: rgba(217,117,106,0.12); border: 1px solid rgba(217,117,106,0.4);
+    color: #e08a80; font-size: 12.5px; padding: 9px 12px; border-radius: 6px;
+    margin-top: 12px; font-family:'Oswald', sans-serif;
+  }
+  .auth-info{
+    font-family:'Oswald', sans-serif; font-size: 13px; color: var(--text-dim);
+    line-height: 1.6; margin: 0 0 6px;
+  }
+  .auth-info b{ color: var(--silver-bright); }
+  .auth-switch{ font-family:'Oswald', sans-serif; font-size: 12.5px; color: var(--text-dim); margin: 10px 0 0; }
+  .auth-switch a{ color: var(--silver); cursor:pointer; text-decoration: underline; }
+  .auth-switch a:hover{ color: var(--silver-bright); }
+  .session-bar{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap: 8px;
+    padding: 10px 30px; font-family:'Oswald', sans-serif; font-size: 12.5px; color: var(--text-dim);
+    border-bottom: 1px solid var(--edge); background: rgba(255,255,255,0.02);
+  }
+  .session-bar a{ color: var(--silver); cursor:pointer; text-decoration: underline; }
+  .session-bar a:hover{ color: var(--silver-bright); }
 
   /* ---- Footer ---- */
   .site-footer{
@@ -607,6 +627,7 @@
         <h2 style="margin-bottom:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-2px;margin-right:6px"><rect x="3" y="5" width="18" height="14" rx="1.5"/><line x1="6" y1="9" x2="18" y2="9"/><line x1="6" y1="12.5" x2="18" y2="12.5"/><line x1="6" y1="16" x2="13" y2="16"/></svg>Noticias</h2>
         <p class="section-subtitle" style="padding:0; margin-top:4px;">Últimas novedades del torneo, draft, fichajes y comunicados oficiales.</p>
       </div>
+      <div class="session-bar" id="sessionBar"></div>
       <div id="noticiasList"></div>
       <p class="empty-note hidden" id="noticiasEmpty" style="padding:0 30px 24px;">Todavía no hay noticias publicadas.</p>
     </div>
@@ -635,15 +656,7 @@
   <!-- ============ MODAL DE COMENTARIOS ============ -->
   <div id="commentModalOverlay" class="hidden">
     <div id="commentModal">
-      <h3>Dejar un comentario</h3>
-      <label>Tu nombre</label>
-      <input id="commentNombreInput" placeholder="Tu nombre o apodo" maxlength="40" />
-      <label>Comentario</label>
-      <textarea id="commentTextoInput" maxlength="500" placeholder="¿Qué opinás?"></textarea>
-      <div class="modal-actions">
-        <button class="btn secondary" id="commentCancelBtn">Cancelar</button>
-        <button class="btn" id="commentSubmitBtn">Publicar comentario</button>
-      </div>
+      <div id="commentModalBody"></div>
     </div>
   </div>
 
@@ -764,6 +777,7 @@ BRAX!: C"></textarea>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 /* =========================================================================
    CONFIGURACIÓN — misma config de Firebase que las otras páginas.
@@ -784,12 +798,31 @@ const ADMIN_PIN = "3156"; // mismo PIN que las otras páginas, cambialo si quer�
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const auth = firebase.auth();
 const TORNEO_ROOT = db.ref('torneo');
 const DRAFT_ROOT = db.ref('draftEquipos'); // mismo nodo que usa draft-equipos.html
+const USERS_ROOT = db.ref('usuarios');
 
 let torneoState = {};
 let draftState = null;
 let isAdmin = false;
+let currentUser = null;
+let currentUserProfile = null;
+
+auth.onAuthStateChanged((user) => {
+  currentUser = user;
+  if (user) {
+    USERS_ROOT.child(user.uid).once('value').then((snap) => {
+      currentUserProfile = snap.val();
+      renderCommentModalBody();
+      renderNoticias();
+    });
+  } else {
+    currentUserProfile = null;
+    renderCommentModalBody();
+    renderNoticias();
+  }
+});
 
 TORNEO_ROOT.on('value', (snap) => {
   torneoState = snap.val() || {};
@@ -1244,6 +1277,7 @@ function resizeImageFile(file, maxWidth, quality){
 const ICON_COMMENT = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M4 5h16v11H8l-4 4V5Z"/></svg>';
 
 function renderNoticias(){
+  renderSessionBar();
   const container = document.getElementById('noticiasList');
   const emptyEl = document.getElementById('noticiasEmpty');
   const noticias = torneoState.noticias || {};
@@ -1321,13 +1355,28 @@ function renderNoticias(){
   });
 }
 
-/* ---- Modal de comentarios ---- */
+/* ---- Auth: login / registro / verificación / comentarios ---- */
 let activeNoticiaId = null;
+let authModalMode = 'login'; // 'login' | 'register'
+
+const AUTH_ERROR_MESSAGES = {
+  'auth/email-already-in-use': 'Ese email ya tiene una cuenta creada.',
+  'auth/invalid-email': 'El email no es válido.',
+  'auth/weak-password': 'La contraseña tiene que tener al menos 6 caracteres.',
+  'auth/wrong-password': 'Contraseña incorrecta.',
+  'auth/user-not-found': 'No hay ninguna cuenta con ese email.',
+  'auth/invalid-credential': 'Email o contraseña incorrectos.',
+  'auth/too-many-requests': 'Demasiados intentos. Probá de nuevo en un rato.',
+  'auth/missing-password': 'Falta la contraseña.',
+};
+function authErrorMessage(err){
+  return AUTH_ERROR_MESSAGES[err.code] || 'Ocurrió un error. Probá de nuevo.';
+}
 
 function openCommentModal(noticiaId){
   activeNoticiaId = noticiaId;
-  document.getElementById('commentNombreInput').value = '';
-  document.getElementById('commentTextoInput').value = '';
+  authModalMode = 'login';
+  renderCommentModalBody();
   document.getElementById('commentModalOverlay').classList.remove('hidden');
 }
 
@@ -1336,24 +1385,179 @@ function closeCommentModal(){
   document.getElementById('commentModalOverlay').classList.add('hidden');
 }
 
-document.getElementById('commentCancelBtn').addEventListener('click', closeCommentModal);
+function renderCommentModalBody(){
+  const body = document.getElementById('commentModalBody');
+  if (!body) return;
+
+  if (!currentUser) {
+    body.innerHTML = authModalMode === 'register' ? registerFormHtml() : loginFormHtml();
+  } else if (!currentUser.emailVerified) {
+    body.innerHTML = verifyPromptHtml();
+  } else {
+    body.innerHTML = commentFormHtml();
+  }
+  attachModalHandlers();
+}
+
+function loginFormHtml(){
+  return `
+    <h3>Iniciar sesión</h3>
+    <label>Email</label>
+    <input id="authEmailInput" type="email" placeholder="tu@email.com" />
+    <label>Contraseña</label>
+    <input id="authPasswordInput" type="password" placeholder="••••••••" />
+    <div class="modal-actions">
+      <button class="btn secondary" id="commentCancelBtn">Cancelar</button>
+      <button class="btn" id="authSubmitBtn">Iniciar sesión</button>
+    </div>
+    <p class="auth-switch">¿No tenés cuenta? <a id="authSwitchToRegister">Creá una</a></p>
+    <p class="auth-switch"><a id="authForgotPassword">Olvidé mi contraseña</a></p>`;
+}
+
+function registerFormHtml(){
+  return `
+    <h3>Crear cuenta</h3>
+    <label>Tu nombre (así te van a ver en los comentarios)</label>
+    <input id="authNombreInput" placeholder="Tu nombre o apodo" maxlength="40" />
+    <label>Email</label>
+    <input id="authEmailInput" type="email" placeholder="tu@email.com" />
+    <label>Contraseña (mínimo 6 caracteres)</label>
+    <input id="authPasswordInput" type="password" placeholder="••••••••" />
+    <div class="modal-actions">
+      <button class="btn secondary" id="commentCancelBtn">Cancelar</button>
+      <button class="btn" id="authSubmitBtn">Crear cuenta</button>
+    </div>
+    <p class="auth-switch">¿Ya tenés cuenta? <a id="authSwitchToLogin">Iniciá sesión</a></p>`;
+}
+
+function verifyPromptHtml(){
+  return `
+    <h3>Verificá tu correo</h3>
+    <p class="auth-info">Te enviamos un mail a <b>${escapeHtml(currentUser.email)}</b>. Abrilo y confirmá tu cuenta para poder comentar.</p>
+    <div class="modal-actions">
+      <button class="btn secondary" id="authLogoutBtn">Cerrar sesión</button>
+      <button class="btn" id="authResendBtn">Reenviar email</button>
+    </div>
+    <p class="auth-switch"><a id="authRefreshBtn">Ya lo verifiqué, actualizar</a></p>`;
+}
+
+function commentFormHtml(){
+  const nombre = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
+  return `
+    <h3>Dejar un comentario</h3>
+    <p class="auth-info">Comentando como <b>${escapeHtml(nombre)}</b> · <a id="authLogoutBtn">Cerrar sesión</a></p>
+    <label>Comentario</label>
+    <textarea id="commentTextoInput" maxlength="500" placeholder="¿Qué opinás?"></textarea>
+    <div class="modal-actions">
+      <button class="btn secondary" id="commentCancelBtn">Cancelar</button>
+      <button class="btn" id="commentSubmitBtn">Publicar comentario</button>
+    </div>`;
+}
+
+function showAuthError(msg){
+  let el = document.getElementById('authError');
+  if (!el) {
+    el = document.createElement('p');
+    el.id = 'authError';
+    el.className = 'auth-error';
+    document.getElementById('commentModalBody').appendChild(el);
+  }
+  el.textContent = msg;
+}
+
+function attachModalHandlers(){
+  const cancelBtn = document.getElementById('commentCancelBtn');
+  if (cancelBtn) cancelBtn.addEventListener('click', closeCommentModal);
+
+  const switchToRegister = document.getElementById('authSwitchToRegister');
+  if (switchToRegister) switchToRegister.addEventListener('click', () => { authModalMode = 'register'; renderCommentModalBody(); });
+
+  const switchToLogin = document.getElementById('authSwitchToLogin');
+  if (switchToLogin) switchToLogin.addEventListener('click', () => { authModalMode = 'login'; renderCommentModalBody(); });
+
+  const forgotBtn = document.getElementById('authForgotPassword');
+  if (forgotBtn) forgotBtn.addEventListener('click', () => {
+    const email = document.getElementById('authEmailInput').value.trim();
+    if (!email) { showAuthError('Escribí tu email primero.'); return; }
+    auth.sendPasswordResetEmail(email)
+      .then(() => showToast('Te mandamos un mail para restablecer la contraseña ✓', 'success'))
+      .catch((err) => showAuthError(authErrorMessage(err)));
+  });
+
+  const submitBtn = document.getElementById('authSubmitBtn');
+  if (submitBtn) submitBtn.addEventListener('click', () => {
+    const email = document.getElementById('authEmailInput').value.trim();
+    const password = document.getElementById('authPasswordInput').value;
+    if (!email || !password) { showAuthError('Completá email y contraseña.'); return; }
+
+    submitBtn.disabled = true;
+    if (authModalMode === 'register') {
+      const nombre = document.getElementById('authNombreInput').value.trim();
+      if (!nombre) { showAuthError('Poné un nombre para los comentarios.'); submitBtn.disabled = false; return; }
+      auth.createUserWithEmailAndPassword(email, password)
+        .then((cred) => USERS_ROOT.child(cred.user.uid).set({ nombre, email })
+          .then(() => cred.user.sendEmailVerification()))
+        .then(() => showToast('Cuenta creada. Verificá tu email para poder comentar.', 'success'))
+        .catch((err) => { showAuthError(authErrorMessage(err)); submitBtn.disabled = false; });
+    } else {
+      auth.signInWithEmailAndPassword(email, password)
+        .catch((err) => { showAuthError(authErrorMessage(err)); submitBtn.disabled = false; });
+    }
+  });
+
+  const resendBtn = document.getElementById('authResendBtn');
+  if (resendBtn) resendBtn.addEventListener('click', () => {
+    resendBtn.disabled = true;
+    currentUser.sendEmailVerification()
+      .then(() => showToast('Email de verificación reenviado ✓', 'success'))
+      .catch((err) => showAuthError(authErrorMessage(err)))
+      .finally(() => { resendBtn.disabled = false; });
+  });
+
+  const refreshBtn = document.getElementById('authRefreshBtn');
+  if (refreshBtn) refreshBtn.addEventListener('click', () => {
+    currentUser.reload().then(() => {
+      currentUser = auth.currentUser;
+      renderCommentModalBody();
+      if (!currentUser.emailVerified) showToast('Todavía no verificaste el email.', 'error');
+    });
+  });
+
+  const logoutBtn = document.getElementById('authLogoutBtn');
+  if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
+
+  const commentSubmitBtn = document.getElementById('commentSubmitBtn');
+  if (commentSubmitBtn) commentSubmitBtn.addEventListener('click', () => {
+    const texto = document.getElementById('commentTextoInput').value.trim();
+    if (!texto) { showToast('Escribí algo antes de publicar.', 'error'); return; }
+    if (!activeNoticiaId || !currentUser) return;
+    const nombre = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
+    TORNEO_ROOT.child('noticias').child(activeNoticiaId).child('comentarios').push({
+      nombre, texto, timestamp: Date.now(), uid: currentUser.uid,
+    });
+    showToast('Comentario publicado ✓', 'success');
+    closeCommentModal();
+  });
+}
+
 document.getElementById('commentModalOverlay').addEventListener('click', (e) => {
   if (e.target.id === 'commentModalOverlay') closeCommentModal();
 });
-document.getElementById('commentSubmitBtn').addEventListener('click', () => {
-  const nombre = document.getElementById('commentNombreInput').value.trim();
-  const texto = document.getElementById('commentTextoInput').value.trim();
-  if (!nombre || !texto) {
-    showToast('Completá tu nombre y el comentario.', 'error');
-    return;
+
+function renderSessionBar(){
+  const bar = document.getElementById('sessionBar');
+  if (!bar) return;
+  if (currentUser && currentUser.emailVerified) {
+    const nombre = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
+    bar.innerHTML = `Conectado como <b style="color:var(--silver-bright)">${escapeHtml(nombre)}</b> · <a id="sessionLogoutBtn">Cerrar sesión</a>`;
+    document.getElementById('sessionLogoutBtn').addEventListener('click', () => auth.signOut());
+  } else if (currentUser) {
+    bar.innerHTML = `Verificá tu email (<b style="color:var(--silver-bright)">${escapeHtml(currentUser.email)}</b>) para poder comentar · <a id="sessionLogoutBtn">Cerrar sesión</a>`;
+    document.getElementById('sessionLogoutBtn').addEventListener('click', () => auth.signOut());
+  } else {
+    bar.innerHTML = `Creá una cuenta o iniciá sesión para poder comentar en las noticias.`;
   }
-  if (!activeNoticiaId) return;
-  TORNEO_ROOT.child('noticias').child(activeNoticiaId).child('comentarios').push({
-    nombre, texto, timestamp: Date.now(),
-  });
-  showToast('Comentario publicado ✓', 'success');
-  closeCommentModal();
-});
+}
 
 document.getElementById('publishNoticiaBtn').addEventListener('click', async () => {
   const fileInput = document.getElementById('noticiaFileInput');
