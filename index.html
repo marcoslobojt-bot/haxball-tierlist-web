@@ -73,6 +73,7 @@
   .tab-btn.active{
     background: linear-gradient(180deg, var(--silver-bright), var(--silver));
     color: #0a0a0c; border-color: transparent; font-weight: 600;
+    box-shadow: 0 0 14px 1px rgba(255,255,255,0.18);
   }
 
   .tab-panel{ width: 100%; display:flex; flex-direction:column; align-items:center; }
@@ -97,6 +98,15 @@
   .stat-chip{ text-align:center; }
   .stat-chip .num{ font-family:'Cinzel', serif; font-weight:700; font-size: 28px; color: var(--silver-bright); }
   .stat-chip .label{ font-family:'Oswald', sans-serif; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); }
+
+  .skeleton-num{
+    display:inline-block; width: 42px; height: 30px; border-radius: 6px;
+    background: linear-gradient(90deg, var(--surface-2) 25%, rgba(255,255,255,0.09) 50%, var(--surface-2) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    vertical-align: middle;
+  }
+  @keyframes shimmer{ 0%{ background-position: 200% 0; } 100%{ background-position: -200% 0; } }
 
   .preview-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 14px; margin-top: 10px; }
   .preview-card{
@@ -161,11 +171,13 @@
     box-shadow: 0 1px 0 rgba(0,0,0,0.5), 0 10px 22px -12px rgba(0,0,0,0.8);
   }
   button.btn:hover{ filter: brightness(1.05); transform: translateY(-1px); }
+  button.btn:active{ transform: scale(0.98); }
   button.btn.secondary{ background: transparent; color: var(--silver); border: 1px solid var(--edge-strong); box-shadow:none; }
   button.btn.secondary:hover{ background: rgba(255,255,255,0.05); }
   button.btn-small{ padding: 6px 12px; font-size: 10.5px; }
   button.btn-danger{ background: transparent; color: #d9756a; border: 1px solid rgba(217,117,106,0.4); box-shadow:none; }
   button.btn-danger:hover{ background: rgba(217,117,106,0.08); }
+  .tab-btn:active, .quick-link-btn:active, .page-btn:active{ transform: scale(0.98); }
 
   .admin-note{ color: var(--text-dim); font-size: 11.5px; margin-top: 8px; }
 
@@ -550,6 +562,17 @@
     background: var(--surface-2); border: 1px solid var(--edge); border-radius: 12px;
     padding: 16px 20px;
   }
+
+  /* ---- Hover elegante y consistente en tarjetas ---- */
+  .preview-card, .profile-stat, .match-card, .status-card{
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+  .preview-card:hover, .profile-stat:hover, .match-card:hover, .status-card:hover{
+    transform: translateY(-4px);
+    box-shadow: 0 14px 28px -12px rgba(0,0,0,0.55);
+    border-color: var(--silver-dim);
+  }
+
   .status-card-title{
     grid-column: 1 / -1; font-family:'Cinzel', serif; font-size: 13px;
     letter-spacing: 0.08em; text-transform:uppercase; color: var(--tierC);
@@ -589,6 +612,11 @@
   ::-webkit-scrollbar-thumb:hover{ background: var(--silver-dim); }
 
   @keyframes fadeSlideUp{ from{ opacity:0; transform: translateY(14px); } to{ opacity:1; transform: translateY(0); } }
+  .profile-reveal-1{ animation: fadeSlideUp .45s cubic-bezier(.2,.8,.2,1) 0ms both; }
+  .profile-reveal-2{ animation: fadeSlideUp .45s cubic-bezier(.2,.8,.2,1) 80ms both; }
+  .profile-reveal-3{ animation: fadeSlideUp .45s cubic-bezier(.2,.8,.2,1) 160ms both; }
+  .profile-reveal-4{ animation: fadeSlideUp .45s cubic-bezier(.2,.8,.2,1) 240ms both; }
+  .profile-reveal-5{ animation: fadeSlideUp .45s cubic-bezier(.2,.8,.2,1) 320ms both; }
   @keyframes fadeOutDown{ from{ opacity:1; transform: translateY(0); } to{ opacity:0; transform: translateY(-8px); } }
   @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
   @keyframes popIn{ from{ opacity:0; transform: scale(0.94); } to{ opacity:1; transform: scale(1); } }
@@ -672,9 +700,9 @@
       <h2 id="homeNombre">Torneo Prime Hax</h2>
       <p class="desc" id="homeDescripcion">Cargando información del torneo…</p>
       <div class="stat-strip">
-        <div class="stat-chip"><div class="num" id="statEquipos">—</div><div class="label">Equipos</div></div>
-        <div class="stat-chip"><div class="num" id="statPartidosJugados">—</div><div class="label">Partidos jugados</div></div>
-        <div class="stat-chip"><div class="num" id="statPartidosTotales">—</div><div class="label">Partidos totales</div></div>
+        <div class="stat-chip"><div class="num skeleton-num" id="statEquipos"></div><div class="label">Equipos</div></div>
+        <div class="stat-chip"><div class="num skeleton-num" id="statPartidosJugados"></div><div class="label">Partidos jugados</div></div>
+        <div class="stat-chip"><div class="num skeleton-num" id="statPartidosTotales"></div><div class="label">Partidos totales</div></div>
       </div>
       <div class="preview-grid">
         <div class="preview-card">
@@ -1064,6 +1092,21 @@ function animateNumber(el, to){
   requestAnimationFrame(step);
 }
 
+function animateProfileStats(container){
+  if (!container) return;
+  container.querySelectorAll('.profile-stat .num[data-target]').forEach((el) => {
+    animateNumber(el, parseInt(el.dataset.target, 10) || 0);
+  });
+}
+
+function setStatWithSkeleton(el, to){
+  if (el.classList.contains('skeleton-num')) {
+    el.classList.remove('skeleton-num');
+    el.textContent = '0';
+  }
+  animateNumber(el, to);
+}
+
 function renderAll(){
   renderHome();
   renderNoticias();
@@ -1089,12 +1132,12 @@ function renderHome(){
   document.getElementById('homeDescripcion').textContent = info.descripcion || 'Todavía no se cargó una descripción para este torneo.';
 
   const teams = getTeams();
-  animateNumber(document.getElementById('statEquipos'), teams.length);
+  setStatWithSkeleton(document.getElementById('statEquipos'), teams.length);
 
   const partidos = getPartidosArray();
   const jugados = partidos.filter((p) => p.golesLocal != null && p.golesVisitante != null);
-  animateNumber(document.getElementById('statPartidosJugados'), jugados.length);
-  animateNumber(document.getElementById('statPartidosTotales'), partidos.length);
+  setStatWithSkeleton(document.getElementById('statPartidosJugados'), jugados.length);
+  setStatWithSkeleton(document.getElementById('statPartidosTotales'), partidos.length);
 
   const stats = torneoState.stats || {};
   const goleadores = Object.keys(stats)
@@ -2068,14 +2111,16 @@ function profileBodyHtml(jugador){
   return {
     badge: `${escapeHtml(jugador)} · ${escapeHtml(equipo || 'sin equipo')}`,
     body: `
-      <div class="profile-stats">
-        <div class="profile-stat"><div class="num">${stat.goles || 0}</div><div class="label">Goles</div></div>
-        <div class="profile-stat"><div class="num">${stat.asistencias || 0}</div><div class="label">Asistencias</div></div>
-        <div class="profile-stat"><div class="num">${partidosJugados.length}</div><div class="label">Partidos jugados</div></div>
+      <div class="profile-stats profile-reveal-4">
+        <div class="profile-stat"><div class="num" data-target="${stat.goles || 0}">0</div><div class="label">Goles</div></div>
+        <div class="profile-stat"><div class="num" data-target="${stat.asistencias || 0}">0</div><div class="label">Asistencias</div></div>
+        <div class="profile-stat"><div class="num" data-target="${partidosJugados.length}">0</div><div class="label">Partidos jugados</div></div>
       </div>
-      <p class="profile-note" style="margin-bottom:14px;">El historial de MVP todavía no se registra en el sitio — lo vamos a sumar más adelante como una sección aparte.</p>
-      <h2 style="font-size:15px;">Partidos de ${escapeHtml(equipo)}</h2>
-      ${partidosHtml}`,
+      <p class="profile-note profile-reveal-4" style="margin-bottom:14px;">El historial de MVP todavía no se registra en el sitio — lo vamos a sumar más adelante como una sección aparte.</p>
+      <div class="profile-reveal-5">
+        <h2 style="font-size:15px;">Partidos de ${escapeHtml(equipo)}</h2>
+        ${partidosHtml}
+      </div>`,
   };
 }
 
@@ -2110,10 +2155,10 @@ function renderPerfil(){
           <button class="btn btn-small" id="saveNombreBtn">Guardar</button>
           <button class="btn btn-small secondary" id="cancelNombreBtn">Cancelar</button>
         </div>`
-      : `<div class="profile-name">${escapeHtml(nombre)} <a id="editNombreBtn" class="edit-nombre-link">✎ cambiar</a></div>`;
+      : `<div class="profile-name profile-reveal-2">${escapeHtml(nombre)} <a id="editNombreBtn" class="edit-nombre-link">✎ cambiar</a></div>`;
 
     const avatarBlockHtml = `
-      <div class="profile-avatar-wrap" id="profileAvatarWrap" title="Cambiar foto de perfil">
+      <div class="profile-avatar-wrap profile-reveal-1" id="profileAvatarWrap" title="Cambiar foto de perfil">
         ${avatarHtml(currentUserProfile && currentUserProfile.avatar, 56)}
         <input type="file" id="avatarFileInput" accept="image/*" style="display:none" />
       </div>`;
@@ -2125,9 +2170,10 @@ function renderPerfil(){
           ${avatarBlockHtml}
           ${nombreHeaderHtml}
         </div>
-        <div class="profile-badge">${badge}</div>
+        <div class="profile-badge profile-reveal-3">${badge}</div>
       </div>
       ${body}`;
+    animateProfileStats(panel);
 
     const editBtn = document.getElementById('editNombreBtn');
     if (editBtn) editBtn.addEventListener('click', () => { editingNombre = true; renderPerfil(); });
@@ -2540,12 +2586,13 @@ function renderForoPerfilAjeno(panel, uid){
     <a class="forum-back" id="foroBackBtn">‹ Volver al foro</a>
     <div class="profile-header">
       <div style="display:flex; align-items:center; gap:14px;">
-        ${avatarHtml(perfil.avatar, 56)}
-        <div class="profile-name">${escapeHtml(perfil.nombre || '(sin nombre)')}</div>
+        <div class="profile-reveal-1">${avatarHtml(perfil.avatar, 56)}</div>
+        <div class="profile-name profile-reveal-2">${escapeHtml(perfil.nombre || '(sin nombre)')}</div>
       </div>
-      <div class="profile-badge">${badge}</div>
+      <div class="profile-badge profile-reveal-3">${badge}</div>
     </div>
     ${body}`;
+  animateProfileStats(panel);
 
   document.getElementById('foroBackBtn').addEventListener('click', () => {
     foroView = 'list'; foroActiveProfileUid = null; renderForo();
