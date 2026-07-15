@@ -290,6 +290,8 @@
   /* ---- Mi Perfil ---- */
   .profile-header{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom: 18px; }
   .profile-name{ font-family:'Cinzel', serif; font-weight:700; font-size: 20px; color: var(--silver-bright); }
+  .profile-avatar-wrap{ cursor:pointer; transition: opacity .15s ease; border-radius: 50%; }
+  .profile-avatar-wrap:hover{ opacity: 0.75; }
   .profile-badge{
     font-family:'Oswald', sans-serif; font-size: 11px; letter-spacing:0.08em; text-transform:uppercase;
     padding: 4px 10px; border-radius: 100px; border: 1px solid var(--edge-strong); color: var(--text-dim);
@@ -428,12 +430,36 @@
   .topbar{
     width:100%; background: linear-gradient(90deg, #0d0d0f, #17171a);
     border-bottom: 1px solid var(--edge);
-    display:flex; align-items:center; justify-content:center; gap: 10px;
+    display:flex; align-items:center; justify-content:space-between; gap: 14px;
     padding: 7px 14px; font-family:'Oswald', sans-serif; font-size: 11.5px;
     letter-spacing: 0.1em; text-transform:uppercase; color: var(--text-dim);
+    flex-wrap: wrap;
   }
+  .topbar-ticker{ display:flex; align-items:center; gap: 10px; flex-wrap:wrap; }
   .topbar-item b{ color: var(--silver-bright); }
   .topbar-sep{ color: var(--edge-strong); }
+
+  .topbar-auth{ display:flex; align-items:center; gap: 10px; text-transform:none; letter-spacing:0.02em; }
+  .topbar-login-btn{
+    background: #5865F2; color:#fff; border:none; cursor:pointer;
+    padding: 6px 14px; border-radius: 100px; font-family:'Oswald', sans-serif;
+    font-weight:600; font-size: 11px; letter-spacing:0.03em;
+    transition: filter .15s ease;
+  }
+  .topbar-login-btn:hover{ filter: brightness(1.12); }
+  .topbar-user{ display:flex; align-items:center; gap: 8px; cursor:pointer; }
+  .topbar-user-name{ color: var(--silver-bright); font-size: 11.5px; font-weight:500; }
+  .topbar-logout{ color: var(--text-dim); font-size: 10.5px; cursor:pointer; text-decoration: underline; }
+  .topbar-logout:hover{ color: var(--silver-bright); }
+
+  /* ---- Avatares ---- */
+  .avatar-img{ border-radius: 50%; object-fit: cover; display:inline-block; flex-shrink:0; vertical-align:middle; }
+  .avatar-generic{
+    display:inline-flex; align-items:center; justify-content:center; border-radius: 50%;
+    background: var(--surface-2); border: 1px solid var(--edge-strong); color: var(--text-dim);
+    flex-shrink:0; vertical-align:middle; overflow:hidden;
+  }
+  .avatar-generic svg{ width: 70%; height: 70%; }
 
   .site-subtitle{
     text-align:center; font-family:'Oswald', sans-serif; font-weight:300; font-size: 14px;
@@ -551,9 +577,12 @@
 <body>
 
   <div class="topbar" id="topBar">
-    <span class="topbar-item" id="topBarTemporada">TEMPORADA 2026</span>
-    <span class="topbar-sep">·</span>
-    <span class="topbar-item" id="topBarProximo">Bienvenidos a Prime Hax</span>
+    <div class="topbar-ticker">
+      <span class="topbar-item" id="topBarTemporada">TEMPORADA 2026</span>
+      <span class="topbar-sep">·</span>
+      <span class="topbar-item" id="topBarProximo">Bienvenidos a Prime Hax</span>
+    </div>
+    <div class="topbar-auth" id="topbarAuth"></div>
   </div>
 
   <div class="brand-header">
@@ -572,7 +601,6 @@
     <button class="tab-btn" data-tab="partidos">Partidos</button>
     <button class="tab-btn" data-tab="tierlist">Tierlist</button>
     <button class="tab-btn" data-tab="posiciones">Posiciones</button>
-    <button class="tab-btn" data-tab="perfil">Mi Perfil</button>
   </div>
 
   <!-- ============ HOME ============ -->
@@ -876,11 +904,15 @@ auth.onAuthStateChanged((user) => {
       currentUserProfile = snap.val();
       renderCommentModalBody();
       renderNoticias();
+      renderTopbarAuth();
+      renderPerfil();
     });
   } else {
     currentUserProfile = null;
     renderCommentModalBody();
     renderNoticias();
+    renderTopbarAuth();
+    renderPerfil();
   }
 });
 
@@ -960,6 +992,7 @@ function renderAll(){
   renderPosiciones();
   renderTierlist();
   renderPerfil();
+  renderTopbarAuth();
 }
 
 /* ---------------- HOME ---------------- */
@@ -1309,6 +1342,41 @@ function attachMatchAdminHandlers(){
 }
 
 /* ---------------- NOTICIAS ---------------- */
+const AVATAR_GENERIC_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8.5" r="4"/><path d="M4 20c0-4.2 3.6-6.5 8-6.5s8 2.3 8 6.5"/></svg>';
+
+function avatarHtml(avatarUrl, sizePx){
+  if (avatarUrl) {
+    return `<img src="${avatarUrl}" class="avatar-img" style="width:${sizePx}px;height:${sizePx}px;" alt="avatar" />`;
+  }
+  return `<span class="avatar-generic" style="width:${sizePx}px;height:${sizePx}px;">${AVATAR_GENERIC_SVG}</span>`;
+}
+
+function renderTopbarAuth(){
+  const el = document.getElementById('topbarAuth');
+  if (!el) return;
+  if (!currentUser) {
+    el.innerHTML = `<button class="topbar-login-btn" id="topbarLoginBtn">Iniciar sesión</button>`;
+    document.getElementById('topbarLoginBtn').addEventListener('click', () => openCommentModal(null));
+  } else if (!currentUser.emailVerified) {
+    el.innerHTML = `
+      <span class="topbar-user" id="topbarUserArea">Verificá tu email</span>
+      <span class="topbar-logout" id="topbarLogoutBtn2">Cerrar sesión</span>`;
+    document.getElementById('topbarUserArea').addEventListener('click', () => showTab('perfil'));
+    document.getElementById('topbarLogoutBtn2').addEventListener('click', (e) => { e.stopPropagation(); auth.signOut(); });
+  } else {
+    const nombre = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
+    const avatarUrl = currentUserProfile && currentUserProfile.avatar;
+    el.innerHTML = `
+      <span class="topbar-user" id="topbarUserArea">
+        ${avatarHtml(avatarUrl, 24)}
+        <span class="topbar-user-name">${escapeHtml(nombre)}</span>
+      </span>
+      <span class="topbar-logout" id="topbarLogoutBtn2">Cerrar sesión</span>`;
+    document.getElementById('topbarUserArea').addEventListener('click', () => showTab('perfil'));
+    document.getElementById('topbarLogoutBtn2').addEventListener('click', (e) => { e.stopPropagation(); auth.signOut(); });
+  }
+}
+
 function escapeHtml(str){
   return (str || '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -1378,17 +1446,23 @@ function renderNoticias(){
     const page = Math.min(commentPage[n.id] || 1, totalPages);
     const comentarios = allComentarios.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-    const commentsHtml = comentarios.map((c) => `
+    const commentsHtml = comentarios.map((c) => {
+      const commentAvatar = (c.uid && allUsuarios[c.uid] && allUsuarios[c.uid].avatar) || '';
+      return `
           <div class="comment-item">
             <div class="comment-head">
-              <span class="comment-name">${escapeHtml(c.nombre)}</span>
+              <span style="display:flex; align-items:center; gap:8px;">
+                ${avatarHtml(commentAvatar, 26)}
+                <span class="comment-name">${escapeHtml(c.nombre)}</span>
+              </span>
               <span class="comment-date">${c.timestamp ? new Date(c.timestamp).toLocaleDateString('es-AR') : ''}</span>
             </div>
             <div class="comment-text">${escapeHtml(c.texto)}</div>
             <div class="admin-only" style="margin-top:6px;">
               <button class="comment-delete deleteCommentBtn" data-nid="${n.id}" data-cid="${c.cid}">Borrar comentario</button>
             </div>
-          </div>`).join('');
+          </div>`;
+    }).join('');
 
     const paginationHtml = totalPages > 1 ? `
       <div class="comments-pagination">
@@ -1872,10 +1946,19 @@ function renderPerfil(){
         </div>`
       : `<div class="profile-name">${escapeHtml(nombre)} <a id="editNombreBtn" class="edit-nombre-link">✎ cambiar</a></div>`;
 
+    const avatarBlockHtml = `
+      <div class="profile-avatar-wrap" id="profileAvatarWrap" title="Cambiar foto de perfil">
+        ${avatarHtml(currentUserProfile && currentUserProfile.avatar, 56)}
+        <input type="file" id="avatarFileInput" accept="image/*" style="display:none" />
+      </div>`;
+
     if (!jugador) {
       panel.innerHTML = `
         <div class="profile-header">
-          ${nombreHeaderHtml}
+          <div style="display:flex; align-items:center; gap:14px;">
+            ${avatarBlockHtml}
+            ${nombreHeaderHtml}
+          </div>
           <div class="profile-badge">Sin vincular</div>
         </div>
         <p class="profile-note">Tu cuenta todavía no está vinculada a ningún jugador del torneo. Pedile al admin que te vincule desde el Discord, y vas a poder ver acá tus goles, asistencias y partidos.</p>`;
@@ -1896,7 +1979,10 @@ function renderPerfil(){
 
       panel.innerHTML = `
         <div class="profile-header">
-          ${nombreHeaderHtml}
+          <div style="display:flex; align-items:center; gap:14px;">
+            ${avatarBlockHtml}
+            ${nombreHeaderHtml}
+          </div>
           <div class="profile-badge">${escapeHtml(jugador)} · ${escapeHtml(equipo || 'sin equipo')}</div>
         </div>
         <div class="profile-stats">
@@ -1911,6 +1997,24 @@ function renderPerfil(){
 
     const editBtn = document.getElementById('editNombreBtn');
     if (editBtn) editBtn.addEventListener('click', () => { editingNombre = true; renderPerfil(); });
+
+    const avatarWrap = document.getElementById('profileAvatarWrap');
+    const avatarInput = document.getElementById('avatarFileInput');
+    if (avatarWrap && avatarInput) {
+      avatarWrap.addEventListener('click', () => avatarInput.click());
+      avatarInput.addEventListener('change', async () => {
+        if (!avatarInput.files || !avatarInput.files[0]) return;
+        try {
+          const dataUrl = await resizeImageFile(avatarInput.files[0], 200, 0.85);
+          await USERS_ROOT.child(currentUser.uid).update({ avatar: dataUrl });
+          currentUserProfile = { ...currentUserProfile, avatar: dataUrl };
+          showToast('Foto de perfil actualizada ✓', 'success');
+          renderAll();
+        } catch (e) {
+          showToast('No se pudo subir la imagen.', 'error');
+        }
+      });
+    }
 
     const cancelBtn = document.getElementById('cancelNombreBtn');
     if (cancelBtn) cancelBtn.addEventListener('click', () => { editingNombre = false; renderPerfil(); });
