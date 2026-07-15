@@ -269,6 +269,7 @@
   .comment-name{ font-family:'Oswald', sans-serif; font-weight:600; font-size: 13px; color: var(--silver-bright); }
   .comment-date{ font-size: 10.5px; color: var(--text-dim); }
   .comment-text{ font-size: 13.5px; color: var(--text); margin-top: 4px; line-height: 1.5; }
+  .comment-image{ max-width: 100%; max-height: 320px; border-radius: 8px; margin-top: 8px; display:block; }
   .comment-delete{
     background:none; border:none; color: rgba(217,117,106,0.7); cursor:pointer;
     font-size: 11px; font-family:'Oswald', sans-serif; padding:0;
@@ -1521,6 +1522,7 @@ function renderNoticias(){
               <span class="comment-date">${c.timestamp ? new Date(c.timestamp).toLocaleDateString('es-AR') : ''}</span>
             </div>
             <div class="comment-text">${escapeHtml(c.texto)}</div>
+            ${c.imagen ? `<img src="${c.imagen}" class="comment-image" alt="" />` : ''}
             <div class="admin-only" style="margin-top:6px;">
               <button class="comment-delete deleteCommentBtn" data-nid="${n.id}" data-cid="${c.cid}">Borrar comentario</button>
             </div>
@@ -1684,6 +1686,8 @@ function commentFormHtml(){
     <p class="auth-info">Comentando como <b>${escapeHtml(nombre)}</b> · <a id="authLogoutBtn">Cerrar sesión</a></p>
     <label>Comentario</label>
     <textarea id="commentTextoInput" maxlength="500" placeholder="¿Qué opinás?"></textarea>
+    <label>Imagen (opcional)</label>
+    <input type="file" id="commentImagenInput" accept="image/*" />
     <div class="modal-actions">
       <button class="btn secondary" id="commentCancelBtn">Cancelar</button>
       <button class="btn" id="commentSubmitBtn">Publicar comentario</button>
@@ -1778,16 +1782,28 @@ function attachModalHandlers(){
   if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
 
   const commentSubmitBtn = document.getElementById('commentSubmitBtn');
-  if (commentSubmitBtn) commentSubmitBtn.addEventListener('click', () => {
+  if (commentSubmitBtn) commentSubmitBtn.addEventListener('click', async () => {
     const texto = document.getElementById('commentTextoInput').value.trim();
+    const fileInput = document.getElementById('commentImagenInput');
     if (!texto) { showToast('Escribí algo antes de publicar.', 'error'); return; }
     if (!activeNoticiaId || !currentUser) return;
-    const nombre = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
-    TORNEO_ROOT.child('noticias').child(activeNoticiaId).child('comentarios').push({
-      nombre, texto, timestamp: Date.now(), uid: currentUser.uid,
-    });
-    showToast('Comentario publicado ✓', 'success');
-    closeCommentModal();
+
+    commentSubmitBtn.disabled = true;
+    try {
+      let imagen = null;
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        imagen = await resizeImageFile(fileInput.files[0], 700, 0.8);
+      }
+      const nombre = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
+      const payload = { nombre, texto, timestamp: Date.now(), uid: currentUser.uid };
+      if (imagen) payload.imagen = imagen;
+      await TORNEO_ROOT.child('noticias').child(activeNoticiaId).child('comentarios').push(payload);
+      showToast('Comentario publicado ✓', 'success');
+      closeCommentModal();
+    } catch (e) {
+      showToast('No se pudo publicar el comentario.', 'error');
+      commentSubmitBtn.disabled = false;
+    }
   });
 }
 
@@ -2361,6 +2377,7 @@ function renderForoThread(panel, threadId){
           <span class="comment-date">${rFecha}</span>
         </div>
         <div class="forum-reply-text">${escapeHtml(r.texto)}</div>
+        ${r.imagen ? `<img src="${r.imagen}" class="comment-image" alt="" />` : ''}
         ${puedeBorrarReply ? `<button class="comment-delete deleteForoReplyBtn" data-rid="${r.rid}" style="margin-top:6px;">Borrar respuesta</button>` : ''}
       </div>`;
   }).join('') : `<p class="empty-note">Todavía no hay respuestas.</p>`;
@@ -2369,6 +2386,8 @@ function renderForoThread(panel, threadId){
     <div class="admin-block" style="margin-top:16px;">
       <label>Tu respuesta</label>
       <textarea id="foroReplyInput" maxlength="1000" placeholder="Escribí una respuesta…"></textarea>
+      <label>Imagen (opcional)</label>
+      <input type="file" id="foroReplyImagenInput" accept="image/*" />
       <div style="margin-top:10px;"><button class="btn btn-small" id="foroReplyBtn">Responder</button></div>
     </div>`
     : `<p class="profile-note" style="margin-top:16px;">Iniciá sesión para responder. <a id="foroReplyLoginLink" class="edit-nombre-link">Iniciar sesión</a></p>`;
@@ -2412,15 +2431,27 @@ function renderForoThread(panel, threadId){
   if (replyLoginLink) replyLoginLink.addEventListener('click', () => openCommentModal(null));
 
   const replyBtn = document.getElementById('foroReplyBtn');
-  if (replyBtn) replyBtn.addEventListener('click', () => {
+  if (replyBtn) replyBtn.addEventListener('click', async () => {
     const texto = document.getElementById('foroReplyInput').value.trim();
+    const fileInput = document.getElementById('foroReplyImagenInput');
     if (!texto) { showToast('Escribí algo antes de responder.', 'error'); return; }
-    const nombreR = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
-    FORO_ROOT.child(threadId).child('respuestas').push({
-      texto, nombre: nombreR, uid: currentUser.uid, timestamp: Date.now(),
-    });
-    showToast('Respuesta publicada ✓', 'success');
-    renderForo();
+
+    replyBtn.disabled = true;
+    try {
+      let imagen = null;
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        imagen = await resizeImageFile(fileInput.files[0], 700, 0.8);
+      }
+      const nombreR = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
+      const payload = { texto, nombre: nombreR, uid: currentUser.uid, timestamp: Date.now() };
+      if (imagen) payload.imagen = imagen;
+      await FORO_ROOT.child(threadId).child('respuestas').push(payload);
+      showToast('Respuesta publicada ✓', 'success');
+      renderForo();
+    } catch (e) {
+      showToast('No se pudo publicar la respuesta.', 'error');
+      replyBtn.disabled = false;
+    }
   });
 }
 
