@@ -187,6 +187,15 @@
     width:100%; padding: 10px; border-radius: 6px; border:1px solid var(--edge-strong);
     background: var(--surface-2); color:var(--text); text-align:center; font-size: 18px; letter-spacing: 6px; margin-bottom: 12px;
   }
+  #adminAuthWarning{
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 9998;
+    background: linear-gradient(90deg, #3a1414, #4a1a1a);
+    border-top: 1px solid rgba(217,117,106,0.5);
+    color: #f0b8b0; font-family:'Oswald', sans-serif; font-size: 12.5px;
+    padding: 10px 16px; text-align:center;
+  }
+  #adminAuthWarning b{ color: #fff; }
+  #adminAuthWarning a{ color: #fff; text-decoration: underline; cursor:pointer; margin-left: 8px; }
   .hidden{ display:none !important; }
   .empty-note{ color: var(--text-dim); font-size: 13px; padding: 10px 0; }
 
@@ -903,6 +912,11 @@ BRAX!: C"></textarea>
     <button class="btn" id="pinBtn">Entrar</button>
   </div>
 
+  <div id="adminAuthWarning" class="hidden">
+    ⚠️ Tenés el PIN activado, pero no estás logueado con tu cuenta de admin — los cambios <b>no se van a guardar</b>.
+    <a id="adminAuthWarningLoginBtn">Iniciar sesión</a>
+  </div>
+
   <footer class="site-footer">
     <div class="footer-inner">
       <div class="footer-brand">
@@ -936,6 +950,7 @@ const firebaseConfig = {
 };
 
 const ADMIN_PIN = "3156"; // mismo PIN que las otras páginas, cambialo si querés uno distinto
+const ADMIN_UID = "rmKqJ031egOXJZYC0w1D4wax5V13"; // tu cuenta real de admin — las reglas de Firebase exigen este uid para guardar cambios en el torneo
 
 /* ========================================================================= */
 
@@ -970,6 +985,7 @@ auth.onAuthStateChanged((user) => {
       renderNoticias();
       renderTopbarAuth();
       renderPerfil();
+      renderAdminAuthWarning();
     });
   } else {
     currentUserProfile = null;
@@ -977,6 +993,7 @@ auth.onAuthStateChanged((user) => {
     renderNoticias();
     renderTopbarAuth();
     renderPerfil();
+    renderAdminAuthWarning();
   }
 });
 
@@ -1058,6 +1075,7 @@ function renderAll(){
   renderPerfil();
   renderTopbarAuth();
   renderForo();
+  renderAdminAuthWarning();
 }
 
 /* ---------------- HOME ---------------- */
@@ -2576,11 +2594,24 @@ document.getElementById('pinBtn').addEventListener('click', () => {
     document.body.classList.add('is-admin');
     document.getElementById('pinGate').classList.add('hidden');
     renderAll();
-    showToast('Modo admin activado ✓', 'success');
+    if (currentUser && currentUser.uid === ADMIN_UID) {
+      showToast('Modo admin activado ✓', 'success');
+    } else {
+      showToast('PIN correcto, pero iniciá sesión con tu cuenta de admin para poder guardar cambios.', 'error');
+    }
   } else {
     showToast('PIN incorrecto', 'error');
   }
 });
+
+function renderAdminAuthWarning(){
+  const el = document.getElementById('adminAuthWarning');
+  if (!el) return;
+  const desincronizado = isAdmin && (!currentUser || currentUser.uid !== ADMIN_UID);
+  el.classList.toggle('hidden', !desincronizado);
+}
+const adminAuthWarningLoginBtn = document.getElementById('adminAuthWarningLoginBtn');
+if (adminAuthWarningLoginBtn) adminAuthWarningLoginBtn.addEventListener('click', () => openCommentModal(null));
 
 </script>
 </body>
