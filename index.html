@@ -292,6 +292,58 @@
   .profile-name{ font-family:'Cinzel', serif; font-weight:700; font-size: 20px; color: var(--silver-bright); }
   .profile-avatar-wrap{ cursor:pointer; transition: opacity .15s ease; border-radius: 50%; }
   .profile-avatar-wrap:hover{ opacity: 0.75; }
+
+  /* ---- Foro ---- */
+  .forum-search{ margin-bottom: 20px; position: relative; }
+  .forum-search input{
+    width:100%; background: var(--surface-2); border: 1px solid var(--edge-strong);
+    border-radius: 8px; padding: 10px 14px; color: var(--text);
+    font-family:'Oswald', sans-serif; font-size: 13.5px;
+  }
+  .forum-search-results{
+    margin-top: 8px; background: var(--surface-2); border: 1px solid var(--edge);
+    border-radius: 8px; overflow:hidden;
+  }
+  .forum-search-result{
+    display:flex; align-items:center; gap: 10px; padding: 8px 12px; cursor:pointer;
+    border-bottom: 1px solid var(--edge); transition: background .15s ease;
+  }
+  .forum-search-result:last-child{ border-bottom:none; }
+  .forum-search-result:hover{ background: rgba(255,255,255,0.05); }
+  .forum-search-result span{ font-family:'Oswald', sans-serif; font-size: 13px; color: var(--text); }
+
+  .forum-toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; flex-wrap:wrap; gap:10px; }
+
+  .forum-thread-row{
+    display:flex; gap: 12px; padding: 14px 4px; border-bottom: 1px solid var(--edge);
+    cursor:pointer; transition: background .15s ease; align-items:flex-start;
+  }
+  .forum-thread-row:hover{ background: rgba(255,255,255,0.03); }
+  .forum-thread-body{ flex:1; min-width:0; }
+  .forum-thread-title{ font-family:'Cinzel', serif; font-weight:700; font-size: 15.5px; color: var(--silver-bright); margin-bottom: 3px; }
+  .forum-thread-snippet{ font-size: 12.5px; color: var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom: 5px; }
+  .forum-thread-meta{ font-size: 11px; color: var(--text-dim); display:flex; gap: 10px; align-items:center; }
+  .forum-author{ display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+  .forum-author span{ color: var(--silver); font-weight:500; }
+  .forum-author:hover span{ color: var(--silver-bright); text-decoration:underline; }
+  .forum-reply-count{
+    flex-shrink:0; text-align:center; font-family:'Oswald', sans-serif;
+    color: var(--text-dim); font-size: 11px; min-width: 46px;
+  }
+  .forum-reply-count b{ display:block; font-size: 17px; color: var(--silver-bright); font-family:'Cinzel', serif; }
+
+  .forum-back{ font-family:'Oswald', sans-serif; font-size: 12.5px; color: var(--text-dim); cursor:pointer; margin-bottom: 16px; display:inline-block; }
+  .forum-back:hover{ color: var(--silver-bright); }
+
+  .forum-thread-header{ margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--edge); }
+  .forum-thread-title-big{ font-family:'Cinzel', serif; font-weight:700; font-size: 22px; color: var(--silver-bright); margin: 10px 0 6px; }
+  .forum-thread-image{ width:100%; max-height: 500px; object-fit: contain; border-radius: 10px; background:#000; margin: 12px 0; }
+  .forum-thread-text{ font-family:'Oswald', sans-serif; font-weight:300; font-size: 14.5px; line-height:1.7; color: var(--text); }
+  .forum-thread-text p{ margin: 0 0 12px; }
+
+  .forum-reply{ padding: 12px 0; border-bottom: 1px solid var(--edge); }
+  .forum-reply-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom: 6px; }
+  .forum-reply-text{ font-size: 13.5px; color: var(--text); line-height:1.6; }
   .profile-badge{
     font-family:'Oswald', sans-serif; font-size: 11px; letter-spacing:0.08em; text-transform:uppercase;
     padding: 4px 10px; border-radius: 100px; border: 1px solid var(--edge-strong); color: var(--text-dim);
@@ -595,6 +647,7 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="home">Home</button>
     <button class="tab-btn" data-tab="noticias">Noticias</button>
+    <button class="tab-btn" data-tab="foro">Foro</button>
     <button class="tab-btn" data-tab="draft">Draft</button>
     <button class="tab-btn" data-tab="goleadores">Goleadores</button>
     <button class="tab-btn" data-tab="asistidores">Asistidores</button>
@@ -722,6 +775,11 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- ============ FORO ============ -->
+  <div class="tab-panel hidden" id="tab-foro">
+    <div class="panel" id="foroPanel" style="width:min(760px,96vw);"></div>
   </div>
 
   <!-- ============ MODAL DE COMENTARIOS ============ -->
@@ -888,6 +946,7 @@ const DRAFT_ROOT = db.ref('draftEquipos'); // mismo nodo que usa draft-equipos.h
 const USERS_ROOT = db.ref('usuarios'); // perfil público: { nombre }
 const EMAILS_ROOT = db.ref('emails'); // privado, solo lo puede escribir el dueño
 const USERNAMES_ROOT = db.ref('usernames'); // mapeo nombreDeUsuario -> email, para poder loguearse sin el mail
+const FORO_ROOT = TORNEO_ROOT.child('foro');
 
 let torneoState = {};
 let draftState = null;
@@ -896,6 +955,9 @@ let currentUser = null;
 let currentUserProfile = null;
 let commentPage = {};
 let editingNombre = false;
+let foroView = 'list'; // 'list' | 'thread' | 'nuevo' | 'perfil'
+let foroActiveThreadId = null;
+let foroActiveProfileUid = null;
 
 auth.onAuthStateChanged((user) => {
   currentUser = user;
@@ -993,6 +1055,7 @@ function renderAll(){
   renderTierlist();
   renderPerfil();
   renderTopbarAuth();
+  renderForo();
 }
 
 /* ---------------- HOME ---------------- */
@@ -1913,6 +1976,41 @@ function renderPosiciones(){
 }
 
 /* ---------------- MI PERFIL ---------------- */
+function profileBodyHtml(jugador){
+  if (!jugador) {
+    return {
+      badge: 'Sin vincular',
+      body: `<p class="profile-note">Todavía no está vinculada a ningún jugador del torneo.</p>`,
+    };
+  }
+  const statKey = sanitizeKey(jugador);
+  const stat = (torneoState.stats || {})[statKey] || { goles: 0, asistencias: 0, equipo: '' };
+  const equipo = stat.equipo || '';
+  const partidos = equipo ? getPartidosArray().filter((p) => p.local === equipo || p.visitante === equipo) : [];
+  const partidosJugados = partidos.filter((p) => p.golesLocal != null && p.golesVisitante != null);
+
+  const partidosHtml = partidos.length ? partidos
+    .sort((a, b) => (a.fecha || 0) - (b.fecha || 0))
+    .map((p) => {
+      const jugado = p.golesLocal != null && p.golesVisitante != null;
+      const marcador = jugado ? `${p.golesLocal} - ${p.golesVisitante}` : 'vs';
+      return `<div class="match-card"><div class="match-teams"><span class="side">${p.local}</span><span class="match-score">${marcador}</span><span class="side right">${p.visitante}</span></div><span class="match-meta">Fecha ${p.fecha}${p.horario ? ' · ' + p.horario : ''}</span></div>`;
+    }).join('') : '<p class="profile-note">Todavía no tiene partidos cargados.</p>';
+
+  return {
+    badge: `${escapeHtml(jugador)} · ${escapeHtml(equipo || 'sin equipo')}`,
+    body: `
+      <div class="profile-stats">
+        <div class="profile-stat"><div class="num">${stat.goles || 0}</div><div class="label">Goles</div></div>
+        <div class="profile-stat"><div class="num">${stat.asistencias || 0}</div><div class="label">Asistencias</div></div>
+        <div class="profile-stat"><div class="num">${partidosJugados.length}</div><div class="label">Partidos jugados</div></div>
+      </div>
+      <p class="profile-note" style="margin-bottom:14px;">El historial de MVP todavía no se registra en el sitio — lo vamos a sumar más adelante como una sección aparte.</p>
+      <h2 style="font-size:15px;">Partidos de ${escapeHtml(equipo)}</h2>
+      ${partidosHtml}`,
+  };
+}
+
 function renderPerfil(){
   const panel = document.getElementById('perfilPanel');
   if (!panel) return;
@@ -1952,48 +2050,16 @@ function renderPerfil(){
         <input type="file" id="avatarFileInput" accept="image/*" style="display:none" />
       </div>`;
 
-    if (!jugador) {
-      panel.innerHTML = `
-        <div class="profile-header">
-          <div style="display:flex; align-items:center; gap:14px;">
-            ${avatarBlockHtml}
-            ${nombreHeaderHtml}
-          </div>
-          <div class="profile-badge">Sin vincular</div>
+    const { badge, body } = profileBodyHtml(jugador);
+    panel.innerHTML = `
+      <div class="profile-header">
+        <div style="display:flex; align-items:center; gap:14px;">
+          ${avatarBlockHtml}
+          ${nombreHeaderHtml}
         </div>
-        <p class="profile-note">Tu cuenta todavía no está vinculada a ningún jugador del torneo. Pedile al admin que te vincule desde el Discord, y vas a poder ver acá tus goles, asistencias y partidos.</p>`;
-    } else {
-      const statKey = sanitizeKey(jugador);
-      const stat = (torneoState.stats || {})[statKey] || { goles: 0, asistencias: 0, equipo: '' };
-      const equipo = stat.equipo || '';
-      const partidos = equipo ? getPartidosArray().filter((p) => p.local === equipo || p.visitante === equipo) : [];
-      const partidosJugados = partidos.filter((p) => p.golesLocal != null && p.golesVisitante != null);
-
-      const partidosHtml = partidos.length ? partidos
-        .sort((a, b) => (a.fecha || 0) - (b.fecha || 0))
-        .map((p) => {
-          const jugado = p.golesLocal != null && p.golesVisitante != null;
-          const marcador = jugado ? `${p.golesLocal} - ${p.golesVisitante}` : 'vs';
-          return `<div class="match-card"><div class="match-teams"><span class="side">${p.local}</span><span class="match-score">${marcador}</span><span class="side right">${p.visitante}</span></div><span class="match-meta">Fecha ${p.fecha}${p.horario ? ' · ' + p.horario : ''}</span></div>`;
-        }).join('') : '<p class="profile-note">Todavía no tiene partidos cargados.</p>';
-
-      panel.innerHTML = `
-        <div class="profile-header">
-          <div style="display:flex; align-items:center; gap:14px;">
-            ${avatarBlockHtml}
-            ${nombreHeaderHtml}
-          </div>
-          <div class="profile-badge">${escapeHtml(jugador)} · ${escapeHtml(equipo || 'sin equipo')}</div>
-        </div>
-        <div class="profile-stats">
-          <div class="profile-stat"><div class="num">${stat.goles || 0}</div><div class="label">Goles</div></div>
-          <div class="profile-stat"><div class="num">${stat.asistencias || 0}</div><div class="label">Asistencias</div></div>
-          <div class="profile-stat"><div class="num">${partidosJugados.length}</div><div class="label">Partidos jugados</div></div>
-        </div>
-        <p class="profile-note" style="margin-bottom:14px;">El historial de MVP todavía no se registra en el sitio — lo vamos a sumar más adelante como una sección aparte.</p>
-        <h2 style="font-size:15px;">Partidos de ${escapeHtml(equipo)}</h2>
-        ${partidosHtml}`;
-    }
+        <div class="profile-badge">${badge}</div>
+      </div>
+      ${body}`;
 
     const editBtn = document.getElementById('editNombreBtn');
     if (editBtn) editBtn.addEventListener('click', () => { editingNombre = true; renderPerfil(); });
@@ -2094,6 +2160,294 @@ function renderVinculosAdmin(){
       }
       showToast('Vínculo guardado ✓', 'success');
     });
+  });
+}
+
+/* ---------------- FORO ---------------- */
+function openProfileFromForo(uid){
+  if (currentUser && uid === currentUser.uid) {
+    showTab('perfil');
+    return;
+  }
+  foroActiveProfileUid = uid;
+  foroView = 'perfil';
+  renderForo();
+}
+
+function forumAuthorHtml(uid, nombre, avatarUrl){
+  return `
+    <span class="forum-author" data-uid="${uid}">
+      ${avatarHtml(avatarUrl, 22)}
+      <span>${escapeHtml(nombre)}</span>
+    </span>`;
+}
+
+function attachForumAuthorHandlers(container){
+  container.querySelectorAll('.forum-author').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openProfileFromForo(el.dataset.uid);
+    });
+  });
+}
+
+function renderForo(){
+  const panel = document.getElementById('foroPanel');
+  if (!panel) return;
+  if (foroView === 'nuevo') return renderForoNuevoHilo(panel);
+  if (foroView === 'thread' && foroActiveThreadId) return renderForoThread(panel, foroActiveThreadId);
+  if (foroView === 'perfil' && foroActiveProfileUid) return renderForoPerfilAjeno(panel, foroActiveProfileUid);
+  return renderForoLista(panel);
+}
+
+function renderForoLista(panel){
+  const hilos = torneoState.foro || {};
+  const items = Object.keys(hilos)
+    .map((id) => ({ id, ...hilos[id] }))
+    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+  const puedePublicar = currentUser && currentUser.emailVerified;
+  const nuevoBtnHtml = puedePublicar
+    ? `<button class="btn btn-small" id="foroNuevoBtn">+ Nuevo hilo</button>`
+    : `<button class="btn btn-small secondary" id="foroLoginBtn">Iniciá sesión para publicar</button>`;
+
+  const listHtml = items.length
+    ? items.map((h) => {
+        const nombre = h.nombre || '(sin nombre)';
+        const avatarUrl = (h.uid && allUsuarios[h.uid] && allUsuarios[h.uid].avatar) || '';
+        const respuestas = Object.keys(h.respuestas || {}).length;
+        const fecha = h.timestamp ? new Date(h.timestamp).toLocaleDateString('es-AR') : '';
+        const snippet = (h.cuerpo || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+        return `
+          <div class="forum-thread-row" data-id="${h.id}">
+            <div class="forum-thread-body">
+              <div class="forum-thread-title">${escapeHtml(h.titulo)}</div>
+              <div class="forum-thread-snippet">${escapeHtml(snippet)}</div>
+              <div class="forum-thread-meta">
+                ${forumAuthorHtml(h.uid, nombre, avatarUrl)}
+                <span>·</span>
+                <span>${fecha}</span>
+              </div>
+            </div>
+            <div class="forum-reply-count"><b>${respuestas}</b>respuestas</div>
+          </div>`;
+      }).join('')
+    : `<p class="empty-note">Todavía no hay hilos publicados. ¡Arrancá vos el primero!</p>`;
+
+  panel.innerHTML = `
+    <div class="forum-search">
+      <input id="foroSearchInput" placeholder="Buscar usuario por nombre…" autocomplete="off" />
+      <div id="foroSearchResults"></div>
+    </div>
+    <div class="forum-toolbar">
+      <h2 style="margin:0;">Foro</h2>
+      ${nuevoBtnHtml}
+    </div>
+    <div id="foroThreadList">${listHtml}</div>`;
+
+  document.querySelectorAll('.forum-thread-row').forEach((row) => {
+    row.addEventListener('click', () => {
+      foroActiveThreadId = row.dataset.id;
+      foroView = 'thread';
+      renderForo();
+    });
+  });
+  attachForumAuthorHandlers(panel);
+
+  const nuevoBtn = document.getElementById('foroNuevoBtn');
+  if (nuevoBtn) nuevoBtn.addEventListener('click', () => { foroView = 'nuevo'; renderForo(); });
+  const loginBtn = document.getElementById('foroLoginBtn');
+  if (loginBtn) loginBtn.addEventListener('click', () => openCommentModal(null));
+
+  const searchInput = document.getElementById('foroSearchInput');
+  const searchResults = document.getElementById('foroSearchResults');
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    if (!q) { searchResults.innerHTML = ''; return; }
+    const matches = Object.keys(allUsuarios)
+      .filter((uid) => (allUsuarios[uid].nombre || '').toLowerCase().includes(q))
+      .slice(0, 8);
+    if (matches.length === 0) {
+      searchResults.innerHTML = `<div class="forum-search-results"><div class="forum-search-result"><span>Sin resultados.</span></div></div>`;
+      return;
+    }
+    searchResults.innerHTML = `<div class="forum-search-results">${matches.map((uid) => `
+      <div class="forum-search-result" data-uid="${uid}">
+        ${avatarHtml(allUsuarios[uid].avatar, 26)}
+        <span>${escapeHtml(allUsuarios[uid].nombre)}</span>
+      </div>`).join('')}</div>`;
+    searchResults.querySelectorAll('.forum-search-result[data-uid]').forEach((el) => {
+      el.addEventListener('click', () => openProfileFromForo(el.dataset.uid));
+    });
+  });
+}
+
+function renderForoNuevoHilo(panel){
+  panel.innerHTML = `
+    <a class="forum-back" id="foroBackBtn">‹ Volver al foro</a>
+    <h2>Nuevo hilo</h2>
+    <div class="admin-block">
+      <label>Título</label>
+      <input id="foroTituloInput" maxlength="120" placeholder="¿De qué querés hablar?" />
+      <label>Texto</label>
+      <textarea id="foroCuerpoInput" placeholder="Escribí acá..."></textarea>
+      <label>Imagen (opcional)</label>
+      <input type="file" id="foroImagenInput" accept="image/*" />
+      <div style="margin-top:14px;">
+        <button class="btn" id="foroPublicarBtn">Publicar hilo</button>
+      </div>
+    </div>`;
+
+  document.getElementById('foroBackBtn').addEventListener('click', () => { foroView = 'list'; renderForo(); });
+
+  const publicarBtn = document.getElementById('foroPublicarBtn');
+  publicarBtn.addEventListener('click', async () => {
+    const titulo = document.getElementById('foroTituloInput').value.trim();
+    const cuerpo = document.getElementById('foroCuerpoInput').value.trim();
+    const fileInput = document.getElementById('foroImagenInput');
+    if (!titulo || !cuerpo) { showToast('Completá el título y el texto.', 'error'); return; }
+    if (!currentUser || !currentUser.emailVerified) { showToast('Iniciá sesión primero.', 'error'); return; }
+
+    publicarBtn.disabled = true;
+    publicarBtn.textContent = 'Publicando…';
+    try {
+      let imagen = null;
+      if (fileInput.files && fileInput.files[0]) {
+        imagen = await resizeImageFile(fileInput.files[0], 1000, 0.85);
+      }
+      const nombre = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
+      const ref = await FORO_ROOT.push({
+        titulo, cuerpo, imagen, nombre, uid: currentUser.uid, timestamp: Date.now(),
+      });
+      foroActiveThreadId = ref.key;
+      foroView = 'thread';
+      showToast('Hilo publicado ✓', 'success');
+      renderForo();
+    } catch (e) {
+      showToast('No se pudo publicar el hilo.', 'error');
+      publicarBtn.disabled = false;
+      publicarBtn.textContent = 'Publicar hilo';
+    }
+  });
+}
+
+function renderForoThread(panel, threadId){
+  const h = (torneoState.foro || {})[threadId];
+  if (!h) {
+    panel.innerHTML = `<a class="forum-back" id="foroBackBtn">‹ Volver al foro</a><p class="empty-note">Este hilo ya no existe.</p>`;
+    document.getElementById('foroBackBtn').addEventListener('click', () => { foroView = 'list'; renderForo(); });
+    return;
+  }
+
+  const nombre = h.nombre || '(sin nombre)';
+  const avatarUrl = (h.uid && allUsuarios[h.uid] && allUsuarios[h.uid].avatar) || '';
+  const fecha = h.timestamp ? new Date(h.timestamp).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const cuerpoHtml = (h.cuerpo || '').split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean).map((p) => `<p>${escapeHtml(p)}</p>`).join('');
+  const puedeBorrarHilo = isAdmin || (currentUser && currentUser.uid === h.uid);
+
+  const respuestas = Object.keys(h.respuestas || {})
+    .map((rid) => ({ rid, ...h.respuestas[rid] }))
+    .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+  const respuestasHtml = respuestas.length ? respuestas.map((r) => {
+    const rNombre = r.nombre || '(sin nombre)';
+    const rAvatar = (r.uid && allUsuarios[r.uid] && allUsuarios[r.uid].avatar) || '';
+    const rFecha = r.timestamp ? new Date(r.timestamp).toLocaleDateString('es-AR') : '';
+    const puedeBorrarReply = isAdmin || (currentUser && currentUser.uid === r.uid);
+    return `
+      <div class="forum-reply">
+        <div class="forum-reply-head">
+          ${forumAuthorHtml(r.uid, rNombre, rAvatar)}
+          <span class="comment-date">${rFecha}</span>
+        </div>
+        <div class="forum-reply-text">${escapeHtml(r.texto)}</div>
+        ${puedeBorrarReply ? `<button class="comment-delete deleteForoReplyBtn" data-rid="${r.rid}" style="margin-top:6px;">Borrar respuesta</button>` : ''}
+      </div>`;
+  }).join('') : `<p class="empty-note">Todavía no hay respuestas.</p>`;
+
+  const replyFormHtml = (currentUser && currentUser.emailVerified) ? `
+    <div class="admin-block" style="margin-top:16px;">
+      <label>Tu respuesta</label>
+      <textarea id="foroReplyInput" maxlength="1000" placeholder="Escribí una respuesta…"></textarea>
+      <div style="margin-top:10px;"><button class="btn btn-small" id="foroReplyBtn">Responder</button></div>
+    </div>`
+    : `<p class="profile-note" style="margin-top:16px;">Iniciá sesión para responder. <a id="foroReplyLoginLink" class="edit-nombre-link">Iniciar sesión</a></p>`;
+
+  panel.innerHTML = `
+    <a class="forum-back" id="foroBackBtn">‹ Volver al foro</a>
+    <div class="forum-thread-header">
+      ${forumAuthorHtml(h.uid, nombre, avatarUrl)}
+      <div class="forum-thread-title-big">${escapeHtml(h.titulo)}</div>
+      <div class="comment-date">${fecha}</div>
+      ${h.imagen ? `<img src="${h.imagen}" class="forum-thread-image" alt="" />` : ''}
+      <div class="forum-thread-text">${cuerpoHtml}</div>
+      ${puedeBorrarHilo ? `<button class="btn btn-small btn-danger" id="foroDeleteThreadBtn" style="margin-top:10px;">Borrar hilo</button>` : ''}
+    </div>
+    <h2 style="font-size:15px;">Respuestas (${respuestas.length})</h2>
+    ${respuestasHtml}
+    ${replyFormHtml}`;
+
+  document.getElementById('foroBackBtn').addEventListener('click', () => { foroView = 'list'; foroActiveThreadId = null; renderForo(); });
+  attachForumAuthorHandlers(panel);
+
+  const deleteThreadBtn = document.getElementById('foroDeleteThreadBtn');
+  if (deleteThreadBtn) deleteThreadBtn.addEventListener('click', () => {
+    if (!confirm('¿Borrar este hilo y todas sus respuestas?')) return;
+    FORO_ROOT.child(threadId).remove();
+    foroView = 'list';
+    foroActiveThreadId = null;
+    showToast('Hilo borrado', 'success');
+    renderForo();
+  });
+
+  document.querySelectorAll('.deleteForoReplyBtn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!confirm('¿Borrar esta respuesta?')) return;
+      FORO_ROOT.child(threadId).child('respuestas').child(btn.dataset.rid).remove();
+      showToast('Respuesta borrada', 'success');
+    });
+  });
+
+  const replyLoginLink = document.getElementById('foroReplyLoginLink');
+  if (replyLoginLink) replyLoginLink.addEventListener('click', () => openCommentModal(null));
+
+  const replyBtn = document.getElementById('foroReplyBtn');
+  if (replyBtn) replyBtn.addEventListener('click', () => {
+    const texto = document.getElementById('foroReplyInput').value.trim();
+    if (!texto) { showToast('Escribí algo antes de responder.', 'error'); return; }
+    const nombreR = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
+    FORO_ROOT.child(threadId).child('respuestas').push({
+      texto, nombre: nombreR, uid: currentUser.uid, timestamp: Date.now(),
+    });
+    showToast('Respuesta publicada ✓', 'success');
+    renderForo();
+  });
+}
+
+function renderForoPerfilAjeno(panel, uid){
+  const perfil = allUsuarios[uid];
+  if (!perfil) {
+    panel.innerHTML = `<a class="forum-back" id="foroBackBtn">‹ Volver al foro</a><p class="empty-note">No se encontró este perfil.</p>`;
+    document.getElementById('foroBackBtn').addEventListener('click', () => { foroView = 'list'; renderForo(); });
+    return;
+  }
+  const vinculo = (torneoState.vinculos || {})[uid];
+  const jugador = vinculo && vinculo.jugador;
+  const { badge, body } = profileBodyHtml(jugador);
+
+  panel.innerHTML = `
+    <a class="forum-back" id="foroBackBtn">‹ Volver al foro</a>
+    <div class="profile-header">
+      <div style="display:flex; align-items:center; gap:14px;">
+        ${avatarHtml(perfil.avatar, 56)}
+        <div class="profile-name">${escapeHtml(perfil.nombre || '(sin nombre)')}</div>
+      </div>
+      <div class="profile-badge">${badge}</div>
+    </div>
+    ${body}`;
+
+  document.getElementById('foroBackBtn').addEventListener('click', () => {
+    foroView = 'list'; foroActiveProfileUid = null; renderForo();
   });
 }
 
