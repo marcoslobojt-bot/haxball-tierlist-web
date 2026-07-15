@@ -959,6 +959,7 @@ let editingNombre = false;
 let foroView = 'list'; // 'list' | 'thread' | 'nuevo' | 'perfil'
 let foroActiveThreadId = null;
 let foroActiveProfileUid = null;
+let foroListPage = 1;
 
 auth.onAuthStateChanged((user) => {
   currentUser = user;
@@ -1472,6 +1473,37 @@ function resizeImageFile(file, maxWidth, quality){
   });
 }
 
+const MAX_GIF_BYTES = 3 * 1024 * 1024; // 3MB — límite razonable para no inflar la base de datos
+
+function readFileAsDataUrl(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// Como resizeImageFile, pero si el archivo es un GIF lo deja animado (sin pasar por canvas,
+// que aplastaría el GIF a un solo cuadro), siempre que no supere MAX_GIF_BYTES de peso.
+function processImageFile(file, maxWidth, quality){
+  if (file.type === 'image/gif') {
+    if (file.size > MAX_GIF_BYTES) {
+      return Promise.reject(new Error('GIF_TOO_BIG'));
+    }
+    return readFileAsDataUrl(file);
+  }
+  return resizeImageFile(file, maxWidth, quality);
+}
+
+function handleImageError(err, defaultMsg){
+  if (err && err.message === 'GIF_TOO_BIG') {
+    showToast('Ese GIF pesa más de 3MB — probá con uno más liviano.', 'error');
+  } else {
+    showToast(defaultMsg, 'error');
+  }
+}
+
 const ICON_COMMENT = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M4 5h16v11H8l-4 4V5Z"/></svg>';
 
 function renderNoticias(){
@@ -1792,7 +1824,7 @@ function attachModalHandlers(){
     try {
       let imagen = null;
       if (fileInput && fileInput.files && fileInput.files[0]) {
-        imagen = await resizeImageFile(fileInput.files[0], 700, 0.8);
+        imagen = await processImageFile(fileInput.files[0], 700, 0.8);
       }
       const nombre = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
       const payload = { nombre, texto, timestamp: Date.now(), uid: currentUser.uid };
@@ -1801,7 +1833,7 @@ function attachModalHandlers(){
       showToast('Comentario publicado ✓', 'success');
       closeCommentModal();
     } catch (e) {
-      showToast('No se pudo publicar el comentario.', 'error');
+      handleImageError(e, 'No se pudo publicar el comentario.');
       commentSubmitBtn.disabled = false;
     }
   });
@@ -1845,7 +1877,7 @@ document.getElementById('publishNoticiaBtn').addEventListener('click', async () 
   btn.disabled = true;
   btn.textContent = 'Publicando…';
   try {
-    const dataUrl = await resizeImageFile(fileInput.files[0], 1080, 0.85);
+    const dataUrl = await processImageFile(fileInput.files[0], 1080, 0.85);
     TORNEO_ROOT.child('noticias').push({ title, kicker, body, image: dataUrl, timestamp: Date.now() });
     showToast('Noticia publicada ✓', 'success');
     fileInput.value = '';
@@ -1853,7 +1885,7 @@ document.getElementById('publishNoticiaBtn').addEventListener('click', async () 
     document.getElementById('noticiaKickerInput').value = '';
     document.getElementById('noticiaBodyInput').value = '';
   } catch (e) {
-    showToast('No se pudo procesar la imagen.', 'error');
+    handleImageError(e, 'No se pudo procesar la imagen.');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Publicar noticia';
@@ -2218,9 +2250,14 @@ function renderForo(){
 
 function renderForoLista(panel){
   const hilos = torneoState.foro || {};
-  const items = Object.keys(hilos)
+  const allItems = Object.keys(hilos)
     .map((id) => ({ id, ...hilos[id] }))
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+  const PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(allItems.length / PAGE_SIZE));
+  foroListPage = Math.min(Math.max(foroListPage, 1), totalPages);
+  const items = allItems.slice((foroListPage - 1) * PAGE_SIZE, foroListPage * PAGE_SIZE);
 
   const puedePublicar = currentUser && currentUser.emailVerified;
   const nuevoBtnHtml = puedePublicar
@@ -2250,6 +2287,13 @@ function renderForoLista(panel){
       }).join('')
     : `<p class="empty-note">Todavía no hay hilos publicados. ¡Arrancá vos el primero!</p>`;
 
+  const paginationHtml = (allItems.length > 0 && totalPages > 1) ? `
+    <div class="comments-pagination">
+      <button class="page-btn" id="foroPagPrev" ${foroListPage <= 1 ? 'disabled' : ''}>‹ Anterior</button>
+      <span class="page-indicator">Página ${foroListPage} de ${totalPages}</span>
+      <button class="page-btn" id="foroPagNext" ${foroListPage >= totalPages ? 'disabled' : ''}>Siguiente ›</button>
+    </div>` : '';
+
   panel.innerHTML = `
     <div class="forum-search">
       <input id="foroSearchInput" placeholder="Buscar usuario por nombre…" autocomplete="off" />
@@ -2259,7 +2303,13 @@ function renderForoLista(panel){
       <h2 style="margin:0;">Foro</h2>
       ${nuevoBtnHtml}
     </div>
-    <div id="foroThreadList">${listHtml}</div>`;
+    <div id="foroThreadList">${listHtml}</div>
+    ${paginationHtml}`;
+
+  const prevBtn = document.getElementById('foroPagPrev');
+  if (prevBtn) prevBtn.addEventListener('click', () => { foroListPage -= 1; renderForo(); });
+  const nextBtn = document.getElementById('foroPagNext');
+  if (nextBtn) nextBtn.addEventListener('click', () => { foroListPage += 1; renderForo(); });
 
   document.querySelectorAll('.forum-thread-row').forEach((row) => {
     row.addEventListener('click', () => {
@@ -2329,7 +2379,7 @@ function renderForoNuevoHilo(panel){
     try {
       let imagen = null;
       if (fileInput.files && fileInput.files[0]) {
-        imagen = await resizeImageFile(fileInput.files[0], 1000, 0.85);
+        imagen = await processImageFile(fileInput.files[0], 1000, 0.85);
       }
       const nombre = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
       const ref = await FORO_ROOT.push({
@@ -2340,7 +2390,7 @@ function renderForoNuevoHilo(panel){
       showToast('Hilo publicado ✓', 'success');
       renderForo();
     } catch (e) {
-      showToast('No se pudo publicar el hilo.', 'error');
+      handleImageError(e, 'No se pudo publicar el hilo.');
       publicarBtn.disabled = false;
       publicarBtn.textContent = 'Publicar hilo';
     }
@@ -2440,7 +2490,7 @@ function renderForoThread(panel, threadId){
     try {
       let imagen = null;
       if (fileInput && fileInput.files && fileInput.files[0]) {
-        imagen = await resizeImageFile(fileInput.files[0], 700, 0.8);
+        imagen = await processImageFile(fileInput.files[0], 700, 0.8);
       }
       const nombreR = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
       const payload = { texto, nombre: nombreR, uid: currentUser.uid, timestamp: Date.now() };
@@ -2449,7 +2499,7 @@ function renderForoThread(panel, threadId){
       showToast('Respuesta publicada ✓', 'success');
       renderForo();
     } catch (e) {
-      showToast('No se pudo publicar la respuesta.', 'error');
+      handleImageError(e, 'No se pudo publicar la respuesta.');
       replyBtn.disabled = false;
     }
   });
