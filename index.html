@@ -986,6 +986,7 @@ auth.onAuthStateChanged((user) => {
       renderTopbarAuth();
       renderPerfil();
       renderAdminAuthWarning();
+      renderForo();
     });
   } else {
     currentUserProfile = null;
@@ -994,6 +995,7 @@ auth.onAuthStateChanged((user) => {
     renderTopbarAuth();
     renderPerfil();
     renderAdminAuthWarning();
+    renderForo();
   }
 });
 
