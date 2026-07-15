@@ -306,6 +306,17 @@
   .vinculo-row:last-child{ border-bottom: none; }
   .vinculo-nombre{ flex: 0 0 160px; font-family:'Oswald', sans-serif; font-size: 13.5px; color: var(--silver-bright); }
   .vinculo-row input{ flex: 1; min-width: 160px; }
+  .edit-nombre-link{
+    font-size: 11px; color: var(--text-dim); cursor:pointer; text-decoration: underline;
+    font-family:'Oswald', sans-serif; letter-spacing: 0.02em; vertical-align: middle; margin-left: 6px;
+  }
+  .edit-nombre-link:hover{ color: var(--silver-bright); }
+  .profile-name-edit{ display:flex; align-items:center; gap: 8px; flex-wrap:wrap; }
+  .profile-name-edit input{
+    background: var(--surface-2); border: 1px solid var(--edge-strong); border-radius: 6px;
+    padding: 7px 10px; color: var(--text); font-family:'Oswald', sans-serif; font-size: 14px;
+    max-width: 220px;
+  }
 
   /* ---- Modal de comentarios ---- */
   #commentModalOverlay{
@@ -856,6 +867,7 @@ let isAdmin = false;
 let currentUser = null;
 let currentUserProfile = null;
 let commentPage = {};
+let editingNombre = false;
 
 auth.onAuthStateChanged((user) => {
   currentUser = user;
@@ -1852,10 +1864,18 @@ function renderPerfil(){
     const vinculo = (torneoState.vinculos || {})[currentUser.uid];
     const jugador = vinculo && vinculo.jugador;
 
+    const nombreHeaderHtml = editingNombre ? `
+        <div class="profile-name-edit">
+          <input id="editNombreInput" value="${escapeHtml(nombre)}" maxlength="40" />
+          <button class="btn btn-small" id="saveNombreBtn">Guardar</button>
+          <button class="btn btn-small secondary" id="cancelNombreBtn">Cancelar</button>
+        </div>`
+      : `<div class="profile-name">${escapeHtml(nombre)} <a id="editNombreBtn" class="edit-nombre-link">✎ cambiar</a></div>`;
+
     if (!jugador) {
       panel.innerHTML = `
         <div class="profile-header">
-          <div class="profile-name">${escapeHtml(nombre)}</div>
+          ${nombreHeaderHtml}
           <div class="profile-badge">Sin vincular</div>
         </div>
         <p class="profile-note">Tu cuenta todavía no está vinculada a ningún jugador del torneo. Pedile al admin que te vincule desde el Discord, y vas a poder ver acá tus goles, asistencias y partidos.</p>`;
@@ -1876,7 +1896,7 @@ function renderPerfil(){
 
       panel.innerHTML = `
         <div class="profile-header">
-          <div class="profile-name">${escapeHtml(nombre)}</div>
+          ${nombreHeaderHtml}
           <div class="profile-badge">${escapeHtml(jugador)} · ${escapeHtml(equipo || 'sin equipo')}</div>
         </div>
         <div class="profile-stats">
@@ -1888,6 +1908,41 @@ function renderPerfil(){
         <h2 style="font-size:15px;">Partidos de ${escapeHtml(equipo)}</h2>
         ${partidosHtml}`;
     }
+
+    const editBtn = document.getElementById('editNombreBtn');
+    if (editBtn) editBtn.addEventListener('click', () => { editingNombre = true; renderPerfil(); });
+
+    const cancelBtn = document.getElementById('cancelNombreBtn');
+    if (cancelBtn) cancelBtn.addEventListener('click', () => { editingNombre = false; renderPerfil(); });
+
+    const saveBtn = document.getElementById('saveNombreBtn');
+    if (saveBtn) saveBtn.addEventListener('click', () => {
+      const nuevoNombre = document.getElementById('editNombreInput').value.trim();
+      if (!nuevoNombre) { showToast('El nombre no puede quedar vacío.', 'error'); return; }
+      if (nuevoNombre === nombre) { editingNombre = false; renderPerfil(); return; }
+
+      saveBtn.disabled = true;
+      const newKey = sanitizeKey(nuevoNombre);
+      USERNAMES_ROOT.child(newKey).once('value').then((snap) => {
+        if (snap.exists()) {
+          showToast('Ese nombre ya está en uso. Probá con otro.', 'error');
+          saveBtn.disabled = false;
+          return;
+        }
+        Promise.all([
+          USERS_ROOT.child(currentUser.uid).update({ nombre: nuevoNombre }),
+          USERNAMES_ROOT.child(newKey).set(currentUser.email),
+        ]).then(() => {
+          currentUserProfile = { ...currentUserProfile, nombre: nuevoNombre };
+          editingNombre = false;
+          showToast('Nombre actualizado ✓', 'success');
+          renderAll();
+        }).catch(() => {
+          showToast('No se pudo guardar. Probá de nuevo.', 'error');
+          saveBtn.disabled = false;
+        });
+      });
+    });
   }
 
   renderVinculosAdmin();
