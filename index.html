@@ -975,6 +975,20 @@
       </div>
     </div>
 
+    <div class="panel admin-only">
+      <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:-2px;margin-right:6px"><line x1="4" y1="20" x2="16" y2="8"/><line x1="16" y1="8" x2="20" y2="4"/><line x1="13" y1="11" x2="17" y2="7"/></svg>Carga masiva de fixture</h2>
+      <div class="admin-block">
+        <label>Una línea por partido, formato <code>Fecha: Local vs Visitante</code> (los nombres tienen que ser exactamente los que usás en el Draft)</label>
+        <textarea id="fixtureBulkInput" placeholder="1: Equipo 1 vs Equipo 4
+1: Equipo 2 vs Equipo 3
+2: Equipo 1 vs Equipo 3"></textarea>
+        <div style="margin-top:12px;">
+          <button class="btn" id="loadFixtureBulkBtn">Cargar fixture</button>
+        </div>
+        <p class="help" id="fixtureBulkStatus"></p>
+      </div>
+    </div>
+
     <div class="panel" style="width:min(700px,96vw);">
       <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-2px;margin-right:6px"><rect x="3" y="5" width="18" height="15" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="7" y1="3" x2="7" y2="7"/><line x1="17" y1="3" x2="17" y2="7"/></svg>Partidos</h2>
       <div id="partidosList"></div>
@@ -1007,8 +1021,8 @@ BRAX!: C"></textarea>
   <!-- ============ POSICIONES ============ -->
   <div class="tab-panel hidden" id="tab-posiciones">
     <div class="panel">
-      <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="8" y1="20" x2="16" y2="20"/><path d="M7 6H4v1a4 4 0 0 0 4 4"/><path d="M17 6h3v1a4 4 0 0 1-4 4"/></svg>Tabla de posiciones</h2>
-      <table class="data-table" id="posicionesTable">
+      <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="8" y1="20" x2="16" y2="20"/><path d="M7 6H4v1a4 4 0 0 0 4 4"/><path d="M17 6h3v1a4 4 0 0 1-4 4"/></svg>Zona A</h2>
+      <table class="data-table" id="posicionesTableA">
         <thead><tr>
           <th>#</th><th>Equipo</th>
           <th class="num-col">PJ</th><th class="num-col">G</th><th class="num-col">E</th><th class="num-col">P</th>
@@ -1016,8 +1030,19 @@ BRAX!: C"></textarea>
         </tr></thead>
         <tbody></tbody>
       </table>
-      <p class="empty-note hidden" id="posicionesEmpty">Todavía no hay partidos jugados.</p>
     </div>
+    <div class="panel">
+      <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="8" y1="20" x2="16" y2="20"/><path d="M7 6H4v1a4 4 0 0 0 4 4"/><path d="M17 6h3v1a4 4 0 0 1-4 4"/></svg>Zona B</h2>
+      <table class="data-table" id="posicionesTableB">
+        <thead><tr>
+          <th>#</th><th>Equipo</th>
+          <th class="num-col">PJ</th><th class="num-col">G</th><th class="num-col">E</th><th class="num-col">P</th>
+          <th class="num-col">GF</th><th class="num-col">GC</th><th class="num-col">DG</th><th class="num-col">Pts</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="empty-note hidden" id="posicionesEmpty">Todavía no hay partidos jugados.</p>
   </div>
 
   <!-- ============ MI PERFIL ============ -->
@@ -1546,6 +1571,56 @@ document.getElementById('addPartidoBtn').addEventListener('click', () => {
     fecha, local, visitante, horario, golesLocal: null, golesVisitante: null,
   });
   showToast(`Partido agregado: ${local} vs ${visitante} (Fecha ${fecha}) ✓`, 'success');
+});
+
+document.getElementById('loadFixtureBulkBtn').addEventListener('click', () => {
+  const raw = document.getElementById('fixtureBulkInput').value.trim();
+  const statusEl = document.getElementById('fixtureBulkStatus');
+  if (!raw) { showToast('Pegá el fixture primero.', 'error'); return; }
+
+  const teams = getTeams();
+  const parsed = [];
+  const errores = [];
+  raw.split('\n').forEach((line, i) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    const match = trimmed.match(/^(\d+)\s*[:\-]\s*(.+?)\s+vs\.?\s+(.+)$/i);
+    if (!match) { errores.push(`Línea ${i + 1}: formato no reconocido ("${trimmed}")`); return; }
+    const fecha = parseInt(match[1], 10);
+    const local = match[2].trim();
+    const visitante = match[3].trim();
+    if (!teams.includes(local)) { errores.push(`Línea ${i + 1}: no existe el equipo "${local}"`); return; }
+    if (!teams.includes(visitante)) { errores.push(`Línea ${i + 1}: no existe el equipo "${visitante}"`); return; }
+    parsed.push({ fecha, local, visitante });
+  });
+
+  if (errores.length > 0) {
+    statusEl.textContent = errores.join(' · ');
+    showToast(`${errores.length} línea(s) con error, revisá el detalle abajo.`, 'error');
+    return;
+  }
+  if (parsed.length === 0) {
+    showToast('No se reconoció ningún partido.', 'error');
+    return;
+  }
+
+  const writes = parsed.map((p) => TORNEO_ROOT.child('partidos').push({
+    fecha: p.fecha, local: p.local, visitante: p.visitante, horario: '', golesLocal: null, golesVisitante: null,
+  }));
+
+  Promise.all(writes)
+    .then(() => {
+      statusEl.textContent = '';
+      document.getElementById('fixtureBulkInput').value = '';
+      showToast(`Fixture cargado: ${parsed.length} partidos ✓`, 'success');
+    })
+    .catch((err) => {
+      if (err && err.code === 'PERMISSION_DENIED') {
+        showToast('No se guardó: iniciá sesión con tu cuenta de admin (además del PIN).', 'error');
+      } else {
+        showToast('No se pudo cargar el fixture. Probá de nuevo.', 'error');
+      }
+    });
 });
 
 function renderPartidos(){
@@ -2257,37 +2332,65 @@ document.getElementById('saveTierlistBtn').addEventListener('click', () => {
 function renderPosiciones(){
   const teams = getTeams();
   const partidos = getPartidosArray().filter((p) => p.golesLocal != null && p.golesVisitante != null);
-  const tbody = document.getElementById('posicionesTable').querySelector('tbody');
+  const tbodyA = document.getElementById('posicionesTableA').querySelector('tbody');
+  const tbodyB = document.getElementById('posicionesTableB').querySelector('tbody');
   const emptyEl = document.getElementById('posicionesEmpty');
 
   if (teams.length === 0) {
-    tbody.innerHTML = '';
+    tbodyA.innerHTML = '';
+    tbodyB.innerHTML = '';
     emptyEl.classList.remove('hidden');
     emptyEl.textContent = 'Todavía no hay equipos cargados (cargalos primero desde el Draft).';
     return;
   }
 
-  const table = {};
-  teams.forEach((t) => { table[t] = { equipo: t, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, pts: 0 }; });
+  const mid = Math.ceil(teams.length / 2);
+  const zonaA = teams.slice(0, mid);
+  const zonaB = teams.slice(mid);
 
-  partidos.forEach((m) => {
-    const local = table[m.local];
-    const vis = table[m.visitante];
-    if (!local || !vis) return;
-    local.pj++; vis.pj++;
-    local.gf += m.golesLocal; local.gc += m.golesVisitante;
-    vis.gf += m.golesVisitante; vis.gc += m.golesLocal;
-    if (m.golesLocal > m.golesVisitante) { local.g++; local.pts += 3; vis.p++; }
-    else if (m.golesLocal < m.golesVisitante) { vis.g++; vis.pts += 3; local.p++; }
-    else { local.e++; vis.e++; local.pts += 1; vis.pts += 1; }
-  });
+  function buildTable(zonaTeams, tbody){
+    const table = {};
+    zonaTeams.forEach((t) => { table[t] = { equipo: t, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, pts: 0 }; });
 
-  const rows = Object.values(table).sort((a, b) => {
-    if (b.pts !== a.pts) return b.pts - a.pts;
-    const dgA = a.gf - a.gc, dgB = b.gf - b.gc;
-    if (dgB !== dgA) return dgB - dgA;
-    return b.gf - a.gf;
-  });
+    partidos.forEach((m) => {
+      const local = table[m.local];
+      const vis = table[m.visitante];
+      if (!local || !vis) return; // partido cruzado entre zonas (semis/final), no cuenta en la tabla de zona
+      local.pj++; vis.pj++;
+      local.gf += m.golesLocal; local.gc += m.golesVisitante;
+      vis.gf += m.golesVisitante; vis.gc += m.golesLocal;
+      if (m.golesLocal > m.golesVisitante) { local.g++; local.pts += 3; vis.p++; }
+      else if (m.golesLocal < m.golesVisitante) { vis.g++; vis.pts += 3; local.p++; }
+      else { local.e++; vis.e++; local.pts += 1; vis.pts += 1; }
+    });
+
+    const rows = Object.values(table).sort((a, b) => {
+      if (b.pts !== a.pts) return b.pts - a.pts;
+      const dgA = a.gf - a.gc, dgB = b.gf - b.gc;
+      if (dgB !== dgA) return dgB - dgA;
+      return b.gf - a.gf;
+    });
+
+    const huboPartidos = rows.some((r) => r.pj > 0);
+
+    tbody.innerHTML = rows.map((r, i) => `
+      <tr class="row-enter ${i === 0 && huboPartidos ? 'leader' : ''}" style="animation-delay:${i * 45}ms">
+        <td class="pos">${i + 1}</td>
+        <td style="display:flex;align-items:center;gap:8px;">${crestHtml(r.equipo, 20)}<span>${r.equipo}</span></td>
+        <td class="num">${r.pj}</td>
+        <td class="num">${r.g}</td>
+        <td class="num">${r.e}</td>
+        <td class="num">${r.p}</td>
+        <td class="num">${r.gf}</td>
+        <td class="num">${r.gc}</td>
+        <td class="num">${r.gf - r.gc}</td>
+        <td class="num">${r.pts}</td>
+      </tr>
+    `).join('');
+  }
+
+  buildTable(zonaA, tbodyA);
+  buildTable(zonaB, tbodyB);
 
   if (partidos.length === 0) {
     emptyEl.classList.remove('hidden');
@@ -2295,21 +2398,6 @@ function renderPosiciones(){
   } else {
     emptyEl.classList.add('hidden');
   }
-
-  tbody.innerHTML = rows.map((r, i) => `
-    <tr class="row-enter ${i === 0 && partidos.length > 0 ? 'leader' : ''}" style="animation-delay:${i * 45}ms">
-      <td class="pos">${i + 1}</td>
-      <td style="display:flex;align-items:center;gap:8px;">${crestHtml(r.equipo, 20)}<span>${r.equipo}</span></td>
-      <td class="num">${r.pj}</td>
-      <td class="num">${r.g}</td>
-      <td class="num">${r.e}</td>
-      <td class="num">${r.p}</td>
-      <td class="num">${r.gf}</td>
-      <td class="num">${r.gc}</td>
-      <td class="num">${r.gf - r.gc}</td>
-      <td class="num">${r.pts}</td>
-    </tr>
-  `).join('');
 }
 
 /* ---------------- MI PERFIL ---------------- */
