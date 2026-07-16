@@ -623,6 +623,32 @@
   .countdown-cta{ font-family:'Oswald', sans-serif; font-weight:600; font-size: 12.5px; color: var(--silver); margin-top: 8px; cursor:pointer; }
   .countdown-cta:hover{ color: var(--silver-bright); }
 
+  /* ---- Countdown de evento especial (sorteo, etc.) ---- */
+  @keyframes eventPulse{
+    0%, 100%{ box-shadow: 0 0 0 0 rgba(199,138,46,0.25), inset 0 0 0 1px rgba(199,138,46,0.35); }
+    50%{ box-shadow: 0 0 26px 2px rgba(199,138,46,0.32), inset 0 0 0 1px rgba(199,138,46,0.5); }
+  }
+  .event-countdown-card{
+    margin-top: 22px; text-align:center; padding: 22px 20px;
+    background: linear-gradient(160deg, var(--surface), var(--surface-2));
+    border-radius: 14px;
+    animation: eventPulse 2.4s ease-in-out infinite;
+  }
+  .event-countdown-title{
+    font-family:'Cinzel', serif; font-weight:700; font-size: 16px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--tierC); margin-bottom: 14px;
+  }
+  .event-countdown-clock{ display:flex; align-items:center; justify-content:center; gap: 10px; }
+  .ec-block{ text-align:center; min-width: 56px; }
+  .ec-num{ font-family:'Cinzel', serif; font-weight:700; font-size: 38px; color: var(--silver-bright); line-height:1; }
+  .ec-label{ font-size: 10px; letter-spacing:0.1em; text-transform:uppercase; color: var(--text-dim); margin-top: 4px; }
+  .ec-sep{ font-family:'Cinzel', serif; font-size: 32px; color: var(--tierC); transform: translateY(-6px); }
+  .event-countdown-live{
+    font-family:'Oswald', sans-serif; font-weight:600; font-size: 15px; color: var(--silver-bright);
+  }
+  .event-countdown-live a{ color: var(--tierC); cursor:pointer; text-decoration: underline; margin-left: 6px; }
+  .event-countdown-live a:hover{ color: var(--silver-bright); }
+
   /* ---- Subtítulo de Noticias ---- */
   .section-subtitle{
     font-family:'Oswald', sans-serif; font-weight:300; font-size: 13px;
@@ -756,6 +782,20 @@
         </button>
       </div>
 
+      <div class="event-countdown-card hidden" id="eventCountdownCard">
+        <div class="event-countdown-title" id="eventCountdownTitle">SORTEO</div>
+        <div class="event-countdown-clock">
+          <div class="ec-block"><div class="ec-num" id="ecHoras">00</div><div class="ec-label">Horas</div></div>
+          <div class="ec-sep">:</div>
+          <div class="ec-block"><div class="ec-num" id="ecMinutos">00</div><div class="ec-label">Min</div></div>
+          <div class="ec-sep">:</div>
+          <div class="ec-block"><div class="ec-num" id="ecSegundos">00</div><div class="ec-label">Seg</div></div>
+        </div>
+        <div class="event-countdown-live hidden" id="eventCountdownLive">
+          🎲 ¡Ya está en marcha! <a onclick="showTab('draft')">Ver el Draft en vivo →</a>
+        </div>
+      </div>
+
       <div class="status-card">
         <div class="status-card-title">Estado del torneo</div>
         <div class="status-item"><div class="label">Temporada</div><div class="value">Temporada 1</div></div>
@@ -803,6 +843,11 @@
         <div class="form-row">
           <div><label>Resultado (completar después de jugado)</label><input id="infoResultadoInput" placeholder="5 - 3" /></div>
         </div>
+        <div class="form-row">
+          <div><label>Evento especial — Título (ej. SORTEO)</label><input id="infoEventoTituloInput" placeholder="SORTEO" /></div>
+          <div><label>Evento especial — Fecha y hora</label><input id="infoEventoDatetimeInput" type="datetime-local" /></div>
+        </div>
+        <p class="admin-note">Usalo para cualquier evento en vivo (el sorteo de hoy, el arranque de playoffs, etc.) — el contador de la Home cuenta en vivo hasta esa hora, con segundos y todo.</p>
         <div style="margin-top:12px;"><button class="btn" id="saveInfoBtn">Guardar información</button></div>
       </div>
     </div>
@@ -1213,6 +1258,16 @@ function renderHome(){
   };
   updateMatchStrip();
 
+  if (info.eventoTitulo && info.eventoDatetime) {
+    const evD = new Date(info.eventoDatetime);
+    const horaStr = isNaN(evD.getTime()) ? '' : evD.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    eventCountdownTitleText = `${info.eventoTitulo.toUpperCase()}${horaStr ? ' A LAS ' + horaStr : ''}`;
+    eventCountdownTarget = evD;
+  } else {
+    eventCountdownTarget = null;
+  }
+  updateEventCountdown();
+
   const topBarProximo = document.getElementById('topBarProximo');
   if (info.rivalProximo && info.countdownDatetime) {
     const d = new Date(info.countdownDatetime);
@@ -1245,12 +1300,16 @@ function renderHome(){
     const rivalInput = document.getElementById('infoRivalInput');
     const countdownInput = document.getElementById('infoCountdownInput');
     const resultadoInput = document.getElementById('infoResultadoInput');
+    const eventoTituloInput = document.getElementById('infoEventoTituloInput');
+    const eventoDatetimeInput = document.getElementById('infoEventoDatetimeInput');
     if (document.activeElement !== nombreInput) nombreInput.value = info.nombre || '';
     if (document.activeElement !== descInput) descInput.value = info.descripcion || '';
     if (document.activeElement !== inicioInput) inicioInput.value = info.inicio || '';
     if (document.activeElement !== rivalInput) rivalInput.value = info.rivalProximo || '';
     if (document.activeElement !== countdownInput) countdownInput.value = info.countdownDatetime || '';
     if (document.activeElement !== resultadoInput) resultadoInput.value = info.resultado || '';
+    if (document.activeElement !== eventoTituloInput) eventoTituloInput.value = info.eventoTitulo || '';
+    if (document.activeElement !== eventoDatetimeInput) eventoDatetimeInput.value = info.eventoDatetime || '';
   }
 }
 
@@ -1297,6 +1356,41 @@ function updateMatchStrip(){
 }
 setInterval(updateMatchStrip, 30000);
 
+let eventCountdownTarget = null;
+let eventCountdownTitleText = 'EVENTO';
+
+function updateEventCountdown(){
+  const card = document.getElementById('eventCountdownCard');
+  if (!card) return;
+  const clockEl = card.querySelector('.event-countdown-clock');
+  const liveEl = document.getElementById('eventCountdownLive');
+
+  if (!eventCountdownTarget || isNaN(eventCountdownTarget.getTime())) {
+    card.classList.add('hidden');
+    return;
+  }
+  card.classList.remove('hidden');
+  document.getElementById('eventCountdownTitle').textContent = eventCountdownTitleText;
+
+  const diff = eventCountdownTarget.getTime() - Date.now();
+  if (diff <= 0) {
+    clockEl.classList.add('hidden');
+    liveEl.classList.remove('hidden');
+    return;
+  }
+  clockEl.classList.remove('hidden');
+  liveEl.classList.add('hidden');
+
+  const totalSeconds = Math.floor(diff / 1000);
+  const horas = Math.floor(totalSeconds / 3600);
+  const minutos = Math.floor((totalSeconds % 3600) / 60);
+  const segundos = totalSeconds % 60;
+  document.getElementById('ecHoras').textContent = String(horas).padStart(2, '0');
+  document.getElementById('ecMinutos').textContent = String(minutos).padStart(2, '0');
+  document.getElementById('ecSegundos').textContent = String(segundos).padStart(2, '0');
+}
+setInterval(updateEventCountdown, 1000);
+
 document.getElementById('saveInfoBtn').addEventListener('click', () => {
   TORNEO_ROOT.child('info').set({
     nombre: document.getElementById('infoNombreInput').value.trim() || 'Torneo Prime Hax',
@@ -1305,6 +1399,8 @@ document.getElementById('saveInfoBtn').addEventListener('click', () => {
     rivalProximo: document.getElementById('infoRivalInput').value.trim(),
     countdownDatetime: document.getElementById('infoCountdownInput').value,
     resultado: document.getElementById('infoResultadoInput').value.trim(),
+    eventoTitulo: document.getElementById('infoEventoTituloInput').value.trim(),
+    eventoDatetime: document.getElementById('infoEventoDatetimeInput').value,
   });
   showToast('Información del torneo guardada ✓', 'success');
 });
