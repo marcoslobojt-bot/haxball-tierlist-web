@@ -94,6 +94,23 @@
   }
   .panel p.desc{ color: var(--text-dim); font-size: 14px; line-height: 1.7; }
 
+  .zones-row{
+    width: min(1240px, 96vw);
+    display:flex;
+    flex-wrap: wrap;
+    gap: 22px;
+    justify-content:center;
+  }
+  .zone-panel{
+    width: 100%;
+    max-width: 600px;
+    flex: 1 1 380px;
+    margin-bottom: 0;
+  }
+  @media (max-width: 720px){
+    .zone-panel{ flex-basis: 100%; }
+  }
+
   .stat-strip{ display:flex; gap: 30px; flex-wrap:wrap; justify-content:center; margin: 20px 0 6px; }
   .stat-chip{ text-align:center; }
   .stat-chip .num{ font-family:'Cinzel', serif; font-weight:700; font-size: 28px; color: var(--silver-bright); }
@@ -1020,27 +1037,29 @@ BRAX!: C"></textarea>
 
   <!-- ============ POSICIONES ============ -->
   <div class="tab-panel hidden" id="tab-posiciones">
-    <div class="panel">
-      <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="8" y1="20" x2="16" y2="20"/><path d="M7 6H4v1a4 4 0 0 0 4 4"/><path d="M17 6h3v1a4 4 0 0 1-4 4"/></svg>Zona A</h2>
-      <table class="data-table" id="posicionesTableA">
-        <thead><tr>
-          <th>#</th><th>Equipo</th>
-          <th class="num-col">PJ</th><th class="num-col">G</th><th class="num-col">E</th><th class="num-col">P</th>
-          <th class="num-col">GF</th><th class="num-col">GC</th><th class="num-col">DG</th><th class="num-col">Pts</th>
-        </tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class="panel">
-      <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="8" y1="20" x2="16" y2="20"/><path d="M7 6H4v1a4 4 0 0 0 4 4"/><path d="M17 6h3v1a4 4 0 0 1-4 4"/></svg>Zona B</h2>
-      <table class="data-table" id="posicionesTableB">
-        <thead><tr>
-          <th>#</th><th>Equipo</th>
-          <th class="num-col">PJ</th><th class="num-col">G</th><th class="num-col">E</th><th class="num-col">P</th>
-          <th class="num-col">GF</th><th class="num-col">GC</th><th class="num-col">DG</th><th class="num-col">Pts</th>
-        </tr></thead>
-        <tbody></tbody>
-      </table>
+    <div class="zones-row">
+      <div class="panel zone-panel">
+        <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="8" y1="20" x2="16" y2="20"/><path d="M7 6H4v1a4 4 0 0 0 4 4"/><path d="M17 6h3v1a4 4 0 0 1-4 4"/></svg>Zona A</h2>
+        <table class="data-table" id="posicionesTableA">
+          <thead><tr>
+            <th>#</th><th>Equipo</th>
+            <th class="num-col">PJ</th><th class="num-col">G</th><th class="num-col">E</th><th class="num-col">P</th>
+            <th class="num-col">GF</th><th class="num-col">GC</th><th class="num-col">DG</th><th class="num-col">Pts</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="panel zone-panel">
+        <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="8" y1="20" x2="16" y2="20"/><path d="M7 6H4v1a4 4 0 0 0 4 4"/><path d="M17 6h3v1a4 4 0 0 1-4 4"/></svg>Zona B</h2>
+        <table class="data-table" id="posicionesTableB">
+          <thead><tr>
+            <th>#</th><th>Equipo</th>
+            <th class="num-col">PJ</th><th class="num-col">G</th><th class="num-col">E</th><th class="num-col">P</th>
+            <th class="num-col">GF</th><th class="num-col">GC</th><th class="num-col">DG</th><th class="num-col">Pts</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
     <p class="empty-note hidden" id="posicionesEmpty">Todavía no hay partidos jugados.</p>
   </div>
