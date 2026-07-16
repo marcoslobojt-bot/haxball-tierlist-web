@@ -1392,7 +1392,7 @@ function updateEventCountdown(){
 setInterval(updateEventCountdown, 1000);
 
 document.getElementById('saveInfoBtn').addEventListener('click', () => {
-  TORNEO_ROOT.child('info').set({
+  handleAdminWrite(TORNEO_ROOT.child('info').set({
     nombre: document.getElementById('infoNombreInput').value.trim() || 'Torneo Prime Hax',
     descripcion: document.getElementById('infoDescInput').value.trim(),
     inicio: document.getElementById('infoInicioInput').value.trim(),
@@ -1401,8 +1401,7 @@ document.getElementById('saveInfoBtn').addEventListener('click', () => {
     resultado: document.getElementById('infoResultadoInput').value.trim(),
     eventoTitulo: document.getElementById('infoEventoTituloInput').value.trim(),
     eventoDatetime: document.getElementById('infoEventoDatetimeInput').value,
-  });
-  showToast('Información del torneo guardada ✓', 'success');
+  }), 'Información del torneo guardada ✓');
 });
 
 /* ---------------- GOLEADORES / ASISTIDORES ---------------- */
@@ -1466,10 +1465,9 @@ function renderStatsForms(){
       const player = players.find((p) => p.name === name);
       const goles = parseInt(document.getElementById(`${idPrefix}GolesInput`).value, 10) || 0;
       const asistencias = parseInt(document.getElementById(`${idPrefix}AsisInput`).value, 10) || 0;
-      TORNEO_ROOT.child('stats').child(sanitizeKey(name)).set({
+      handleAdminWrite(TORNEO_ROOT.child('stats').child(sanitizeKey(name)).set({
         name, goles, asistencias, equipo: player ? player.team : '',
-      });
-      showToast(`Estadística de ${name} guardada ✓`, 'success');
+      }), `Estadística de ${name} guardada ✓`);
     });
   });
 }
@@ -1891,6 +1889,21 @@ function authErrorMessage(err){
   return AUTH_ERROR_MESSAGES[err.code] || 'Ocurrió un error. Probá de nuevo.';
 }
 
+// Para usar en TODOS los guardados de admin: solo confirma éxito cuando Firebase
+// realmente terminó de guardar, y si lo rechaza por permisos, avisa la causa real
+// en vez de mostrar un "guardado" falso.
+function handleAdminWrite(promise, successMsg){
+  return promise
+    .then(() => showToast(successMsg, 'success'))
+    .catch((err) => {
+      if (err && err.code === 'PERMISSION_DENIED') {
+        showToast('No se guardó: iniciá sesión con tu cuenta de admin (además del PIN).', 'error');
+      } else {
+        showToast('No se pudo guardar. Probá de nuevo.', 'error');
+      }
+    });
+}
+
 function resolveLoginEmail(identifier){
   if (identifier.includes('@')) return Promise.resolve(identifier);
   const key = sanitizeKey(identifier);
@@ -2207,8 +2220,7 @@ document.getElementById('saveTierlistBtn').addEventListener('click', () => {
     showToast('No se reconoció ningún jugador. Formato: Nombre: Tier', 'error');
     return;
   }
-  TORNEO_ROOT.child('tierlist').set(tierlist);
-  showToast(`Tierlist guardada: ${order} jugadores ✓`, 'success');
+  handleAdminWrite(TORNEO_ROOT.child('tierlist').set(tierlist), `Tierlist guardada: ${order} jugadores ✓`);
 });
 
 /* ---------------- POSICIONES ---------------- */
@@ -2453,12 +2465,10 @@ function renderVinculosAdmin(){
       const uid = btn.dataset.uid;
       const input = document.querySelector(`.vinculoInput[data-uid="${uid}"]`);
       const jugador = input.value.trim();
-      if (jugador) {
-        TORNEO_ROOT.child('vinculos').child(uid).set({ jugador });
-      } else {
-        TORNEO_ROOT.child('vinculos').child(uid).remove();
-      }
-      showToast('Vínculo guardado ✓', 'success');
+      const write = jugador
+        ? TORNEO_ROOT.child('vinculos').child(uid).set({ jugador })
+        : TORNEO_ROOT.child('vinculos').child(uid).remove();
+      handleAdminWrite(write, 'Vínculo guardado ✓');
     });
   });
 }
