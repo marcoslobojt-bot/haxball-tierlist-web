@@ -1628,7 +1628,7 @@ function renderTopbarAuth(){
     document.getElementById('topbarUserArea').addEventListener('click', () => showTab('perfil'));
     document.getElementById('topbarLogoutBtn2').addEventListener('click', (e) => { e.stopPropagation(); auth.signOut(); });
   } else {
-    const nombre = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
+    const nombre = (currentUserProfile && currentUserProfile.nombre) || 'Usuario';
     const avatarUrl = currentUserProfile && currentUserProfile.avatar;
     el.innerHTML = `
       <span class="topbar-user" id="topbarUserArea">
@@ -1986,7 +1986,7 @@ function verifyPromptHtml(){
 }
 
 function commentFormHtml(){
-  const nombre = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
+  const nombre = (currentUserProfile && currentUserProfile.nombre) || 'Usuario';
   return `
     <h3>Dejar un comentario</h3>
     <p class="auth-info">Comentando como <b>${escapeHtml(nombre)}</b> · <a id="authLogoutBtn">Cerrar sesión</a></p>
@@ -2100,7 +2100,7 @@ function attachModalHandlers(){
       if (fileInput && fileInput.files && fileInput.files[0]) {
         imagen = await processImageFile(fileInput.files[0], 700, 0.8);
       }
-      const nombre = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
+      const nombre = (currentUserProfile && currentUserProfile.nombre) || 'Usuario';
       const payload = { nombre, texto, timestamp: Date.now(), uid: currentUser.uid };
       if (imagen) payload.imagen = imagen;
       await TORNEO_ROOT.child('noticias').child(activeNoticiaId).child('comentarios').push(payload);
@@ -2343,7 +2343,7 @@ function renderPerfil(){
       currentUser.sendEmailVerification().then(() => showToast('Email reenviado ✓', 'success'));
     });
   } else {
-    const nombre = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
+    const nombre = (currentUserProfile && currentUserProfile.nombre) || 'Usuario';
     const vinculo = (torneoState.vinculos || {})[currentUser.uid];
     const jugador = vinculo && vinculo.jugador;
 
@@ -2643,7 +2643,7 @@ function renderForoNuevoHilo(panel){
       if (fileInput.files && fileInput.files[0]) {
         imagen = await processImageFile(fileInput.files[0], 1000, 0.85);
       }
-      const nombre = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
+      const nombre = (currentUserProfile && currentUserProfile.nombre) || 'Usuario';
       const ref = await FORO_ROOT.push({
         titulo, cuerpo, imagen, nombre, uid: currentUser.uid, timestamp: Date.now(),
       });
@@ -2754,7 +2754,7 @@ function renderForoThread(panel, threadId){
       if (fileInput && fileInput.files && fileInput.files[0]) {
         imagen = await processImageFile(fileInput.files[0], 700, 0.8);
       }
-      const nombreR = (currentUserProfile && currentUserProfile.nombre) || currentUser.email;
+      const nombreR = (currentUserProfile && currentUserProfile.nombre) || 'Usuario';
       const payload = { texto, nombre: nombreR, uid: currentUser.uid, timestamp: Date.now() };
       if (imagen) payload.imagen = imagen;
       await FORO_ROOT.child(threadId).child('respuestas').push(payload);
@@ -2854,9 +2854,19 @@ function renderAdminAuthWarning(){
   if (!el) return;
   const desincronizado = isAdmin && (!currentUser || currentUser.uid !== ADMIN_UID);
   el.classList.toggle('hidden', !desincronizado);
+  if (!desincronizado) return;
+
+  if (currentUser) {
+    const nombreActual = (currentUserProfile && currentUserProfile.nombre) || 'esta cuenta';
+    el.innerHTML = `⚠️ Tenés el PIN activado, pero la cuenta logueada (<b>${escapeHtml(nombreActual)}</b>) no es la de admin — los cambios <b>no se van a guardar</b>.
+      <a id="adminAuthWarningActionBtn">Cambiar de cuenta</a>`;
+    document.getElementById('adminAuthWarningActionBtn').addEventListener('click', () => auth.signOut());
+  } else {
+    el.innerHTML = `⚠️ Tenés el PIN activado, pero no estás logueado con ninguna cuenta — los cambios <b>no se van a guardar</b>.
+      <a id="adminAuthWarningActionBtn">Iniciar sesión</a>`;
+    document.getElementById('adminAuthWarningActionBtn').addEventListener('click', () => openCommentModal(null));
+  }
 }
-const adminAuthWarningLoginBtn = document.getElementById('adminAuthWarningLoginBtn');
-if (adminAuthWarningLoginBtn) adminAuthWarningLoginBtn.addEventListener('click', () => openCommentModal(null));
 
 </script>
 </body>
