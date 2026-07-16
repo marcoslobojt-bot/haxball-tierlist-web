@@ -138,8 +138,8 @@
     border-radius: 8px; margin-bottom: 8px;
   }
   .match-teams{ display:flex; align-items:center; gap: 14px; font-family:'Oswald', sans-serif; font-weight: 500; font-size: 14px; flex:1; }
-  .match-teams .side{ flex:1; }
-  .match-teams .side.right{ text-align:right; }
+  .match-teams .side{ flex:1; display:flex; align-items:center; gap:8px; }
+  .match-teams .side.right{ justify-content: flex-end; }
   .match-score{ font-family:'Cinzel', serif; font-weight:700; font-size: 17px; color: var(--silver-bright); min-width: 64px; text-align:center; }
   .match-meta{ font-size: 10.5px; color: var(--text-dim); min-width: 90px; text-align:right; }
   .match-admin{ display:flex; gap: 6px; align-items:center; margin-left: 10px; }
@@ -560,6 +560,18 @@
     flex-shrink:0; vertical-align:middle; overflow:hidden;
   }
   .avatar-generic svg{ width: 70%; height: 70%; }
+
+  .crest-img{
+    border-radius: 50%; object-fit: cover; display:inline-block; flex-shrink:0;
+    vertical-align:middle; border: 1px solid var(--edge-strong, rgba(255,255,255,0.16));
+    background: var(--surface-2);
+  }
+  .crest-placeholder{
+    display:inline-flex; align-items:center; justify-content:center; border-radius: 50%;
+    background: var(--surface-2); border: 1px solid var(--edge); color: var(--text-dim);
+    flex-shrink:0; vertical-align:middle; overflow:hidden;
+  }
+  .crest-placeholder svg{ width: 60%; height: 60%; }
 
   .site-subtitle{
     text-align:center; font-family:'Oswald', sans-serif; font-weight:300; font-size: 14px;
@@ -1078,9 +1090,11 @@ const USERS_ROOT = db.ref('usuarios'); // perfil público: { nombre }
 const EMAILS_ROOT = db.ref('emails'); // privado, solo lo puede escribir el dueño
 const USERNAMES_ROOT = db.ref('usernames'); // mapeo nombreDeUsuario -> email, para poder loguearse sin el mail
 const FORO_ROOT = TORNEO_ROOT.child('foro');
+const ESCUDOS_ROOT = db.ref('escudos'); // compartido con draft-equipos.html
 
 let torneoState = {};
 let draftState = null;
+let escudosState = {};
 let isAdmin = false;
 let currentUser = null;
 let currentUserProfile = null;
@@ -1122,6 +1136,22 @@ DRAFT_ROOT.on('value', (snap) => {
   draftState = snap.val();
   renderAll();
 });
+ESCUDOS_ROOT.on('value', (snap) => {
+  escudosState = snap.val() || {};
+  renderAll();
+});
+
+const CREST_PLACEHOLDER_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z"/></svg>';
+
+function crestHtml(teamName, sizePx){
+  const url = escudosState[sanitizeKey(teamName)];
+  const s = sizePx || 22;
+  if (url) {
+    return `<img src="${url}" class="crest-img" style="width:${s}px;height:${s}px;" alt="Escudo ${teamName}" />`;
+  }
+  return `<span class="crest-placeholder" style="width:${s}px;height:${s}px;">${CREST_PLACEHOLDER_SVG}</span>`;
+}
+
 let allUsuarios = {};
 USERS_ROOT.on('value', (snap) => {
   allUsuarios = snap.val() || {};
@@ -1573,9 +1603,9 @@ function matchCardHtml(p, order){
   return `
     <div class="match-card row-enter" style="animation-delay:${(order || 0) * 40}ms">
       <div class="match-teams">
-        <span class="side">${p.local}</span>
+        <span class="side">${crestHtml(p.local, 22)}<span>${p.local}</span></span>
         <span class="match-score">${scoreHtml}</span>
-        <span class="side right">${p.visitante}</span>
+        <span class="side right"><span>${p.visitante}</span>${crestHtml(p.visitante, 22)}</span>
       </div>
       <span class="match-meta">${p.horario || ''}</span>
       ${adminInputs}
@@ -2269,7 +2299,7 @@ function renderPosiciones(){
   tbody.innerHTML = rows.map((r, i) => `
     <tr class="row-enter ${i === 0 && partidos.length > 0 ? 'leader' : ''}" style="animation-delay:${i * 45}ms">
       <td class="pos">${i + 1}</td>
-      <td>${r.equipo}</td>
+      <td style="display:flex;align-items:center;gap:8px;">${crestHtml(r.equipo, 20)}<span>${r.equipo}</span></td>
       <td class="num">${r.pj}</td>
       <td class="num">${r.g}</td>
       <td class="num">${r.e}</td>

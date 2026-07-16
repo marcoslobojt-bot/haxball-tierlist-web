@@ -197,6 +197,78 @@
     color: var(--silver-bright);
     text-align:center;
     text-transform: uppercase;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+  }
+  .crest-img{
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid var(--edge-strong);
+    background: var(--surface-2);
+  }
+  .crest-placeholder{
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    background: var(--surface-2);
+    border: 1px solid var(--edge);
+    color: var(--silver-dim);
+  }
+  .crest-placeholder svg{ width: 60%; height:60%; }
+  .admin-crests{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 10px 0 4px;
+  }
+  .admin-crest-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background: var(--surface-2);
+    border: 1px solid var(--edge);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  .admin-crest-item span{
+    font-size: 11.5px;
+    flex: 1;
+    overflow:hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .admin-crest-item input[type=file]{
+    max-width: 90px;
+    font-size: 10px;
+    padding: 0;
+    border: none;
+    background: none;
+  }
+  .rename-row{
+    display:flex;
+    gap: 8px;
+    align-items:center;
+    margin: 8px 0 4px;
+  }
+  .rename-row select, .rename-row input[type=text]{
+    flex: 1;
+    background: var(--surface-2);
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 8px 10px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 12.5px;
+  }
+  .rename-row button{
+    white-space: nowrap;
   }
   .slot{
     background: var(--surface-2);
@@ -430,6 +502,17 @@ Gustavito.OG: E"></textarea>
       <button id="drawBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:6px"><polygon points="6,4 20,12 6,20"/></svg>Sortear siguiente</button>
     </div>
     <p class="help" id="adminStatus"></p>
+
+    <label>Escudos de equipo (uno por equipo, se ven en todo el sitio)</label>
+    <div class="admin-crests" id="adminCrests"></div>
+
+    <label>Renombrar equipo (mantiene plantel, escudo y actualiza los partidos ya cargados)</label>
+    <div class="rename-row">
+      <select id="renameTeamSelect"></select>
+      <input type="text" id="renameTeamInput" placeholder="Nombre nuevo" />
+      <button id="renameBtn" class="secondary" type="button">Renombrar</button>
+    </div>
+    <p class="help" id="renameStatus"></p>
   </div>
 
   <div id="pinGate" class="hidden">
@@ -440,6 +523,7 @@ Gustavito.OG: E"></textarea>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 /* =========================================================================
    CONFIGURACIÓN — completá con tu proyecto de Firebase antes de publicar
@@ -462,16 +546,66 @@ const SPIN_DURATION = 3800;     // ms que gira la ruleta por sorteo
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const auth = firebase.auth();
 const ROOT = db.ref('draftEquipos');
+const ESCUDOS_ROOT = db.ref('escudos'); // compartido con index.html (Partidos, Posiciones, etc.)
 
 const TIER_ORDER = ['A', 'B', 'C', 'D', 'E'];
 const RESTY_TIERS = ['C', 'D', 'E'];
 
 let state = null;
+let escudos = {};
+
+function sanitizeKey(name){
+  return (name || '').replace(/[.#$/\[\]]/g, '_');
+}
+
+const CREST_PLACEHOLDER_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z"/></svg>';
+
+function crestHtml(teamName){
+  const url = escudos[sanitizeKey(teamName)];
+  if (url) {
+    return `<img src="${url}" class="crest-img" alt="Escudo ${teamName}" />`;
+  }
+  return `<span class="crest-placeholder">${CREST_PLACEHOLDER_SVG}</span>`;
+}
+
+function resizeImageFile(file, maxWidth, quality){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxWidth) {
+          h = Math.round(h * (maxWidth / w));
+          w = maxWidth;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/png', quality));
+      };
+      img.onerror = () => reject(new Error('No se pudo leer la imagen'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+    reader.readAsDataURL(file);
+  });
+}
 
 ROOT.on('value', (snap) => {
   state = snap.val();
   render();
+  renderAdminCrests();
+  renderRenameSelect();
+});
+
+ESCUDOS_ROOT.on('value', (snap) => {
+  escudos = snap.val() || {};
+  render();
+  renderAdminCrests();
 });
 
 // ---- Render principal ----
@@ -507,7 +641,7 @@ function render() {
         slots.push(`<div class="slot">—</div>`);
       }
     }
-    return `<div class="team-card"><h3>${team}</h3>${slots.join('')}</div>`;
+    return `<div class="team-card"><h3>${crestHtml(team)}<span>${team}</span></h3>${slots.join('')}</div>`;
   }).join('');
 
   const pending = state.pending;
@@ -558,6 +692,99 @@ function render() {
     statusLine.textContent = 'Listo para el próximo sorteo.';
   }
 }
+
+function renderAdminCrests(){
+  const box = document.getElementById('adminCrests');
+  if (!box) return;
+  if (!state || !state.teams || state.teams.length === 0) {
+    box.innerHTML = '<p class="help">Cargá el torneo primero para poder subir los escudos.</p>';
+    return;
+  }
+  box.innerHTML = state.teams.map((team, i) => {
+    const key = sanitizeKey(team);
+    const hasCrest = !!escudos[key];
+    return `
+      <div class="admin-crest-item">
+        ${crestHtml(team)}
+        <span title="${team}">${team}</span>
+        <input type="file" accept="image/*" data-team-key="${key}" id="crestInput${i}" />
+      </div>`;
+  }).join('');
+
+  box.querySelectorAll('input[type=file]').forEach((input) => {
+    input.addEventListener('change', async () => {
+      if (!input.files || !input.files[0]) return;
+      try {
+        const dataUrl = await resizeImageFile(input.files[0], 200, 0.9);
+        await ESCUDOS_ROOT.child(input.dataset.teamKey).set(dataUrl);
+      } catch (err) {
+        alert('No se pudo subir el escudo: ' + err.message);
+      }
+    });
+  });
+}
+
+function renderRenameSelect(){
+  const select = document.getElementById('renameTeamSelect');
+  if (!select) return;
+  if (!state || !state.teams || state.teams.length === 0) {
+    select.innerHTML = '';
+    return;
+  }
+  const current = select.value;
+  select.innerHTML = state.teams.map((t) => `<option value="${t}">${t}</option>`).join('');
+  if (state.teams.includes(current)) select.value = current;
+}
+
+document.getElementById('renameBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('renameStatus');
+  const select = document.getElementById('renameTeamSelect');
+  const input = document.getElementById('renameTeamInput');
+  const oldName = select.value;
+  const newName = input.value.trim();
+
+  if (!state || !oldName) { statusEl.textContent = 'No hay equipos cargados.'; return; }
+  if (!newName) { statusEl.textContent = 'Escribí el nombre nuevo.'; return; }
+  if (newName === oldName) { statusEl.textContent = 'Es el mismo nombre.'; return; }
+  if (state.teams.includes(newName)) { statusEl.textContent = 'Ya existe un equipo con ese nombre.'; return; }
+  if (!auth.currentUser) {
+    statusEl.textContent = 'Primero iniciá sesión con tu cuenta admin en primehaxball.com.ar (en esta misma pestaña/navegador) y volvé a intentar — si no, los partidos ya cargados no se van a poder actualizar.';
+    return;
+  }
+
+  statusEl.textContent = 'Renombrando…';
+  try {
+    const updates = {};
+    updates['draftEquipos/teams'] = state.teams.map((t) => (t === oldName ? newName : t));
+
+    const rosters = state.confirmedRosters || {};
+    if (rosters[oldName] !== undefined) {
+      updates[`draftEquipos/confirmedRosters/${newName}`] = rosters[oldName];
+      updates[`draftEquipos/confirmedRosters/${oldName}`] = null;
+    }
+
+    const oldCrestKey = sanitizeKey(oldName);
+    const newCrestKey = sanitizeKey(newName);
+    if (escudos[oldCrestKey]) {
+      updates[`escudos/${newCrestKey}`] = escudos[oldCrestKey];
+      updates[`escudos/${oldCrestKey}`] = null;
+    }
+
+    const partidosSnap = await db.ref('torneo/partidos').once('value');
+    const partidos = partidosSnap.val() || {};
+    Object.keys(partidos).forEach((id) => {
+      const p = partidos[id];
+      if (p.local === oldName) updates[`torneo/partidos/${id}/local`] = newName;
+      if (p.visitante === oldName) updates[`torneo/partidos/${id}/visitante`] = newName;
+    });
+
+    await db.ref().update(updates);
+    input.value = '';
+    statusEl.textContent = `"${oldName}" ahora se llama "${newName}" ✓ (plantel, escudo y partidos actualizados)`;
+  } catch (err) {
+    statusEl.textContent = 'Error al renombrar: ' + err.message;
+  }
+});
 
 // Rosters "efectivos" para mostrar: confirmados + el pending si ya terminó de girar
 function effectiveRosters() {
