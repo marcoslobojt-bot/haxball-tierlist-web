@@ -149,17 +149,18 @@
   .fecha-heading h3{ font-family:'Cinzel', serif; font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--silver-bright); margin:0; }
   .fecha-tag{ font-size: 9.5px; padding: 2px 9px; border-radius: 100px; background: var(--tierB); color:#eafff2; font-weight:700; letter-spacing: 0.05em; text-transform:uppercase; }
   .match-card{
-    display:flex; align-items:center; justify-content:space-between; gap: 14px;
+    display:flex; flex-direction: column; gap: 8px;
     width: 100%; max-width: 700px;
     padding: 13px 18px; background: var(--surface-2); border: 1px solid var(--edge);
     border-radius: 8px; margin-bottom: 8px;
   }
-  .match-teams{ display:flex; align-items:center; gap: 14px; font-family:'Oswald', sans-serif; font-weight: 500; font-size: 14px; flex:1; }
-  .match-teams .side{ flex:1; display:flex; align-items:center; gap:8px; }
-  .match-teams .side.right{ justify-content: flex-end; }
-  .match-score{ font-family:'Cinzel', serif; font-weight:700; font-size: 17px; color: var(--silver-bright); min-width: 64px; text-align:center; }
-  .match-meta{ font-size: 10.5px; color: var(--text-dim); min-width: 90px; text-align:right; }
-  .match-admin{ display:flex; gap: 6px; align-items:center; margin-left: 10px; }
+  .match-teams{ display:flex; align-items:center; gap: 14px; font-family:'Oswald', sans-serif; font-weight: 500; font-size: 14px; width:100%; }
+  .match-teams .side{ flex:1 1 0; min-width:0; display:flex; align-items:center; gap:8px; }
+  .match-teams .side.right{ justify-content: flex-end; text-align:right; }
+  .match-score{ font-family:'Cinzel', serif; font-weight:700; font-size: 17px; color: var(--silver-bright); min-width: 56px; flex-shrink:0; text-align:center; }
+  .match-footer{ display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap: 10px; width:100%; }
+  .match-meta{ font-size: 10.5px; color: var(--text-dim); margin-right:auto; }
+  .match-admin{ display:flex; gap: 6px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
   .match-admin input{
     width: 42px; background: var(--surface); border:1px solid var(--edge); border-radius: 4px;
     color: var(--text); text-align:center; padding: 5px 2px; font-family:'Oswald'; font-size: 13px;
@@ -1701,8 +1702,10 @@ function matchCardHtml(p, order){
         <span class="match-score">${scoreHtml}</span>
         <span class="side right"><span>${p.visitante}</span>${crestHtml(p.visitante, 22)}</span>
       </div>
-      <span class="match-meta">${p.horario || ''}</span>
-      ${adminInputs}
+      <div class="match-footer">
+        <span class="match-meta">${p.horario || ''}</span>
+        ${adminInputs}
+      </div>
     </div>`;
 }
 
