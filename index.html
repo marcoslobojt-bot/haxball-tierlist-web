@@ -111,6 +111,39 @@
     .zone-panel{ flex-basis: 100%; }
   }
 
+  .reglas-panel{ width: min(760px, 96vw); }
+  .reglas-header{ text-align:center; margin-bottom: 30px; }
+  .reglas-kicker{
+    display:block; font-family:'Oswald', sans-serif; font-size: 11px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--tierC); margin-bottom: 8px;
+  }
+  .reglas-title{
+    font-family:'Cinzel', serif; font-weight:700; font-size: 24px; letter-spacing: 0.03em;
+    color: var(--silver-bright); text-transform: uppercase; margin: 0 0 10px;
+  }
+  .reglas-header .desc{ max-width: 520px; margin: 0 auto; }
+  .reglas-list{ display:flex; flex-direction:column; gap: 4px; }
+  .regla-item{
+    display:flex; gap: 18px; align-items:flex-start;
+    padding: 20px 4px; border-bottom: 1px solid var(--edge);
+  }
+  .regla-item:last-child{ border-bottom: none; }
+  .regla-num{
+    flex-shrink:0; width: 38px; height: 38px; border-radius: 50%;
+    border: 1px solid rgba(199,138,46,0.45); color: var(--tierC);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Cinzel', serif; font-weight:700; font-size: 13px;
+  }
+  .regla-body h3{
+    font-family:'Cinzel', serif; font-weight:700; font-size: 15px; letter-spacing: 0.02em;
+    color: var(--silver-bright); margin: 3px 0 8px;
+  }
+  .regla-body p{ color: var(--text-dim); font-size: 14px; line-height: 1.7; margin: 0; }
+  .regla-example{
+    margin-top: 8px !important; font-size: 12.5px !important; color: var(--tierC) !important;
+    font-family:'Oswald', sans-serif; letter-spacing: 0.01em;
+  }
+
   .stat-strip{ display:flex; gap: 30px; flex-wrap:wrap; justify-content:center; margin: 20px 0 6px; }
   .stat-chip{ text-align:center; }
   .stat-chip .num{ font-family:'Cinzel', serif; font-weight:700; font-size: 28px; color: var(--silver-bright); }
@@ -165,6 +198,7 @@
     width: 42px; background: var(--surface); border:1px solid var(--edge); border-radius: 4px;
     color: var(--text); text-align:center; padding: 5px 2px; font-family:'Oswald'; font-size: 13px;
   }
+  .match-admin input.scoreHorario{ width: 92px; text-align:left; padding: 5px 8px; }
 
   /* ---- Formularios de admin ---- */
   .admin-only{ display:none; }
@@ -508,7 +542,7 @@
   .footer-links .sep{ color: var(--edge-strong); }
   .footer-links a{
     font-family:'Oswald', sans-serif; font-size: 12.5px; letter-spacing: 0.04em;
-    color: var(--text-dim); text-decoration:none; transition: color .15s ease;
+    color: var(--text-dim); text-decoration:none; transition: color .15s ease; cursor:pointer;
   }
   .footer-links a:hover{ color: var(--silver-bright); }
   .footer-copy{ font-size: 11px; color: var(--text-dim); letter-spacing: 0.03em; margin:0; opacity:.75; }
@@ -774,6 +808,7 @@
     <button class="tab-btn" data-tab="partidos">Partidos</button>
     <button class="tab-btn" data-tab="tierlist">Tierlist</button>
     <button class="tab-btn" data-tab="posiciones">Posiciones</button>
+    <button class="tab-btn" data-tab="reglas">Reglas</button>
   </div>
 
   <!-- ============ HOME ============ -->
@@ -1065,6 +1100,60 @@ BRAX!: C"></textarea>
     <p class="empty-note hidden" id="posicionesEmpty">Todavía no hay partidos jugados.</p>
   </div>
 
+  <!-- ============ REGLAS ============ -->
+  <div class="tab-panel hidden" id="tab-reglas">
+    <div class="panel reglas-panel">
+      <div class="reglas-header">
+        <span class="reglas-kicker">Prime Hax · Temporada 1</span>
+        <h2 class="reglas-title">Reglamento oficial</h2>
+        <p class="desc">Normas vigentes para todos los partidos del torneo. Su cumplimiento es responsabilidad de ambos capitanes.</p>
+      </div>
+
+      <div class="reglas-list">
+        <div class="regla-item">
+          <div class="regla-num">01</div>
+          <div class="regla-body">
+            <h3>Prohibición del "Haramball"</h3>
+            <p>No está permitido defender con cuatro jugadores dentro del área chica, ni utilizar dos arqueros al mismo tiempo.</p>
+          </div>
+        </div>
+
+        <div class="regla-item">
+          <div class="regla-num">02</div>
+          <div class="regla-body">
+            <h3>Duración de los partidos</h3>
+            <p>Los partidos de la fase de grupos tendrán una duración de 14 minutos. Las semifinales y la final se disputarán en dos tiempos de 10 minutos cada uno.</p>
+          </div>
+        </div>
+
+        <div class="regla-item">
+          <div class="regla-num">03</div>
+          <div class="regla-body">
+            <h3>Reemplazos por ausencia</h3>
+            <p>En caso de que un jugador esté ausente, podrá ser reemplazado únicamente por esa fecha por un jugador de la misma tier o de una tier inferior.</p>
+            <p class="regla-example">Ejemplos: Tier A → A, B o C · Tier B → B o C · Tier C → C</p>
+          </div>
+        </div>
+
+        <div class="regla-item">
+          <div class="regla-num">04</div>
+          <div class="regla-body">
+            <h3>Reprogramación de horarios</h3>
+            <p>Si algún jugador no puede disputar el partido en el horario establecido, ambos capitanes podrán acordar un nuevo horario que resulte conveniente para ambos equipos.</p>
+          </div>
+        </div>
+
+        <div class="regla-item">
+          <div class="regla-num">05</div>
+          <div class="regla-body">
+            <h3>Grabación obligatoria</h3>
+            <p>Todo partido deberá contar con su correspondiente grabación. De lo contrario, el encuentro no será considerado válido.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ MI PERFIL ============ -->
   <div class="tab-panel hidden" id="tab-perfil">
     <div class="panel" id="perfilPanel"></div>
@@ -1098,7 +1187,7 @@ BRAX!: C"></textarea>
       <nav class="footer-links">
         <a href="https://discord.gg/xFxYkQP9p" target="_blank" rel="noopener">Discord</a>
         <span class="sep">|</span>
-        <a href="#" onclick="return false;" title="Próximamente">Reglamento</a>
+        <a onclick="showTab('reglas')">Reglamento</a>
       </nav>
     </div>
     <p class="footer-copy">© 2026 Prime Hax · Todos los derechos reservados</p>
@@ -1689,6 +1778,7 @@ function matchCardHtml(p, order){
     : 'vs';
   const adminInputs = `
     <span class="match-admin admin-only" data-id="${p.id}">
+      <input type="text" class="scoreHorario" value="${p.horario || ''}" placeholder="Horario (ej. 21:00)" />
       <input type="number" min="0" class="scoreLocal" value="${p.golesLocal != null ? p.golesLocal : ''}" placeholder="-" />
       <span>-</span>
       <input type="number" min="0" class="scoreVisitante" value="${p.golesVisitante != null ? p.golesVisitante : ''}" placeholder="-" />
@@ -1716,11 +1806,13 @@ function attachMatchAdminHandlers(){
       const card = btn.closest('.match-admin');
       const gl = card.querySelector('.scoreLocal').value;
       const gv = card.querySelector('.scoreVisitante').value;
+      const horario = card.querySelector('.scoreHorario').value.trim();
       TORNEO_ROOT.child('partidos').child(id).update({
         golesLocal: gl === '' ? null : parseInt(gl, 10),
         golesVisitante: gv === '' ? null : parseInt(gv, 10),
+        horario,
       });
-      showToast('Resultado guardado ✓', 'success');
+      showToast('Guardado ✓', 'success');
     });
   });
   document.querySelectorAll('.deleteMatchBtn').forEach((btn) => {
