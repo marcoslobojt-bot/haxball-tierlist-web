@@ -181,6 +181,7 @@
   .fecha-heading{ display:flex; align-items:center; gap: 10px; margin: 24px 0 10px; width: 100%; max-width: 700px; }
   .fecha-heading h3{ font-family:'Cinzel', serif; font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--silver-bright); margin:0; }
   .fecha-tag{ font-size: 9.5px; padding: 2px 9px; border-radius: 100px; background: var(--tierB); color:#eafff2; font-weight:700; letter-spacing: 0.05em; text-transform:uppercase; }
+  .fecha-dia{ font-family:'Oswald', sans-serif; font-size: 12px; color: var(--text-dim); }
   .match-card{
     display:flex; flex-direction: column; gap: 8px;
     width: 100%; max-width: 700px;
@@ -1042,6 +1043,11 @@
       </div>
     </div>
 
+    <div class="panel admin-only">
+      <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-2px;margin-right:6px"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>Día de cada fecha</h2>
+      <div class="admin-block" id="fechasInfoForm"></div>
+    </div>
+
     <div class="panel" style="width:min(700px,96vw);">
       <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-2px;margin-right:6px"><rect x="3" y="5" width="18" height="15" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="7" y1="3" x2="7" y2="7"/><line x1="17" y1="3" x2="17" y2="7"/></svg>Partidos</h2>
       <div id="partidosList"></div>
@@ -1762,16 +1768,42 @@ function renderPartidos(){
     return fechas[fechas.length - 1];
   })();
 
+  const fechasInfo = torneoState.fechasInfo || {};
+
   list.innerHTML = fechas.map((f, fi) => {
     const tag = f === fechaActual ? '<span class="fecha-tag">Actual</span>' : '';
+    const dia = fechasInfo[f] ? `<span class="fecha-dia">${escapeHtml(fechasInfo[f])}</span>` : '';
     const matches = porFecha[f].map((p, mi) => matchCardHtml(p, fi * 3 + mi)).join('');
     return `
-      <div class="fecha-heading row-enter" style="animation-delay:${fi * 60}ms"><h3>Fecha ${f}</h3>${tag}</div>
+      <div class="fecha-heading row-enter" style="animation-delay:${fi * 60}ms"><h3>Fecha ${f}</h3>${dia}${tag}</div>
       ${matches}
     `;
   }).join('');
 
-  if (isAdmin) attachMatchAdminHandlers();
+  if (isAdmin) { attachMatchAdminHandlers(); renderFechasInfoForm(fechas); }
+}
+
+function renderFechasInfoForm(fechas){
+  const container = document.getElementById('fechasInfoForm');
+  if (!container) return;
+  const fechasInfo = torneoState.fechasInfo || {};
+
+  container.innerHTML = fechas.map((f) => `
+    <div class="form-row" style="margin-bottom:10px;">
+      <div style="flex:1;">
+        <label>Fecha ${f}</label>
+        <input type="text" class="fechaDiaInput" data-fecha="${f}" value="${fechasInfo[f] ? escapeHtml(fechasInfo[f]) : ''}" placeholder="Ej: Martes 21/07" />
+      </div>
+    </div>
+  `).join('') + `<button class="btn" id="saveFechasInfoBtn">Guardar días</button><p class="help" id="fechasInfoStatus"></p>`;
+
+  document.getElementById('saveFechasInfoBtn').addEventListener('click', () => {
+    const updates = {};
+    container.querySelectorAll('.fechaDiaInput').forEach((input) => {
+      updates[`fechasInfo/${input.dataset.fecha}`] = input.value.trim();
+    });
+    handleAdminWrite(TORNEO_ROOT.update(updates), 'Días guardados ✓');
+  });
 }
 
 function matchCardHtml(p, order){
