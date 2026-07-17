@@ -1608,9 +1608,10 @@ function renderStatsForms(){
         </div>
         <div><label>Goles</label><input type="number" min="0" id="${idPrefix}GolesInput" value="0" /></div>
         <div><label>Asistencias</label><input type="number" min="0" id="${idPrefix}AsisInput" value="0" /></div>
+        <div><label>MVPs</label><input type="number" min="0" id="${idPrefix}MvpsInput" value="0" /></div>
       </div>
       <button class="btn" id="${idPrefix}SaveBtn">Guardar estadística</button>
-      <p class="admin-note">Actualiza goles y asistencias juntos para el jugador elegido — se refleja en ambas pestañas.</p>
+      <p class="admin-note">Actualiza goles, asistencias y MVPs juntos para el jugador elegido — se refleja en Goleadores, Asistidores y su perfil.</p>
     </div>
   `;
 
@@ -1629,8 +1630,9 @@ function renderStatsForms(){
       const player = players.find((p) => p.name === name);
       const goles = parseInt(document.getElementById(`${idPrefix}GolesInput`).value, 10) || 0;
       const asistencias = parseInt(document.getElementById(`${idPrefix}AsisInput`).value, 10) || 0;
+      const mvps = parseInt(document.getElementById(`${idPrefix}MvpsInput`).value, 10) || 0;
       handleAdminWrite(TORNEO_ROOT.child('stats').child(sanitizeKey(name)).set({
-        name, goles, asistencias, equipo: player ? player.team : '',
+        name, goles, asistencias, mvps, equipo: player ? player.team : '',
       }), `Estadística de ${name} guardada ✓`);
     });
   });
@@ -1642,6 +1644,7 @@ function fillStatsInputs(idPrefix){
   const stats = (torneoState.stats || {})[sanitizeKey(name)] || {};
   document.getElementById(`${idPrefix}GolesInput`).value = stats.goles || 0;
   document.getElementById(`${idPrefix}AsisInput`).value = stats.asistencias || 0;
+  document.getElementById(`${idPrefix}MvpsInput`).value = stats.mvps || 0;
 }
 
 function sanitizeKey(name){
@@ -2523,7 +2526,7 @@ function profileBodyHtml(jugador){
     };
   }
   const statKey = sanitizeKey(jugador);
-  const stat = (torneoState.stats || {})[statKey] || { goles: 0, asistencias: 0, equipo: '' };
+  const stat = (torneoState.stats || {})[statKey] || { goles: 0, asistencias: 0, mvps: 0, equipo: '' };
   const equipo = stat.equipo || '';
   const partidos = equipo ? getPartidosArray().filter((p) => p.local === equipo || p.visitante === equipo) : [];
   const partidosJugados = partidos.filter((p) => p.golesLocal != null && p.golesVisitante != null);
@@ -2544,9 +2547,9 @@ function profileBodyHtml(jugador){
       <div class="profile-stats profile-reveal-4">
         <div class="profile-stat"><div class="num" data-target="${stat.goles || 0}">0</div><div class="label">Goles</div></div>
         <div class="profile-stat"><div class="num" data-target="${stat.asistencias || 0}">0</div><div class="label">Asistencias</div></div>
+        <div class="profile-stat"><div class="num" data-target="${stat.mvps || 0}">0</div><div class="label">MVPs</div></div>
         <div class="profile-stat"><div class="num" data-target="${partidosJugados.length}">0</div><div class="label">Partidos jugados</div></div>
       </div>
-      <p class="profile-note profile-reveal-4" style="margin-bottom:14px;">El historial de MVP todavía no se registra en el sitio — lo vamos a sumar más adelante como una sección aparte.</p>
       <div class="profile-reveal-5">
         <h2 style="font-size:15px;">Partidos de ${escapeHtml(equipo)}</h2>
         ${partidosHtml}
