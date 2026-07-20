@@ -200,6 +200,7 @@
     color: var(--text); text-align:center; padding: 5px 2px; font-family:'Oswald'; font-size: 13px;
   }
   .match-admin input.scoreHorario{ width: 92px; text-align:left; padding: 5px 8px; }
+  .match-admin input.scoreReplay{ width: 170px; text-align:left; padding: 5px 8px; }
 
   /* ---- Formularios de admin ---- */
   .admin-only{ display:none; }
@@ -215,19 +216,20 @@
     border-radius: 6px; padding: 9px 10px; font-family: 'Oswald', sans-serif; font-size: 13px;
   }
   .admin-block textarea{ min-height: 90px; resize: vertical; }
-  button.btn{
+  button.btn, a.btn{
     background: linear-gradient(180deg, var(--silver-bright), var(--silver));
     color: #0a0a0c; border: 1px solid rgba(255,255,255,0.5); border-radius: 5px;
     padding: 10px 18px; font-family:'Oswald', sans-serif; font-weight: 600; font-size: 11.5px;
     letter-spacing: 0.08em; text-transform: uppercase; cursor:pointer;
     transition: transform .15s ease, filter .15s ease;
     box-shadow: 0 1px 0 rgba(0,0,0,0.5), 0 10px 22px -12px rgba(0,0,0,0.8);
+    display:inline-block; text-decoration:none;
   }
-  button.btn:hover{ filter: brightness(1.05); transform: translateY(-1px); }
-  button.btn:active{ transform: scale(0.98); }
+  button.btn:hover, a.btn:hover{ filter: brightness(1.05); transform: translateY(-1px); }
+  button.btn:active, a.btn:active{ transform: scale(0.98); }
   button.btn.secondary{ background: transparent; color: var(--silver); border: 1px solid var(--edge-strong); box-shadow:none; }
   button.btn.secondary:hover{ background: rgba(255,255,255,0.05); }
-  button.btn-small{ padding: 6px 12px; font-size: 10.5px; }
+  button.btn-small, a.btn-small{ padding: 6px 12px; font-size: 10.5px; }
   button.btn-danger{ background: transparent; color: #d9756a; border: 1px solid rgba(217,117,106,0.4); box-shadow:none; }
   button.btn-danger:hover{ background: rgba(217,117,106,0.08); }
   .tab-btn:active, .quick-link-btn:active, .page-btn:active{ transform: scale(0.98); }
@@ -1128,7 +1130,7 @@ BRAX!: C"></textarea>
           <div class="regla-num">02</div>
           <div class="regla-body">
             <h3>Duración de los partidos</h3>
-            <p>Los partidos de la fase de grupos tendrán una duración de 14 minutos. Las semifinales y la final se disputarán en dos tiempos de 10 minutos cada uno.</p>
+            <p>Los partidos se disputarán en dos tiempos de 7 minutos cada uno.</p>
           </div>
         </div>
 
@@ -1657,7 +1659,6 @@ function sanitizeKey(name){
   return (name || '').replace(/[.#$/\[\]]/g, '_');
 }
 
-/* ---------------- PARTIDOS ---------------- */
 function renderPartidosSelects(){
   const teams = getTeams();
   const opts = teams.map((t) => `<option value="${t}">${t}</option>`).join('');
@@ -1814,12 +1815,16 @@ function matchCardHtml(p, order){
   const adminInputs = `
     <span class="match-admin admin-only" data-id="${p.id}">
       <input type="text" class="scoreHorario" value="${p.horario || ''}" placeholder="Horario (ej. 21:00)" />
+      <input type="text" class="scoreReplay" value="${p.replay ? escapeHtml(p.replay) : ''}" placeholder="Link de repetición (.hbr2)" />
       <input type="number" min="0" class="scoreLocal" value="${p.golesLocal != null ? p.golesLocal : ''}" placeholder="-" />
       <span>-</span>
       <input type="number" min="0" class="scoreVisitante" value="${p.golesVisitante != null ? p.golesVisitante : ''}" placeholder="-" />
       <button class="btn btn-small saveScoreBtn" data-id="${p.id}">Guardar</button>
       <button class="btn btn-small btn-danger deleteMatchBtn" data-id="${p.id}">Borrar</button>
     </span>`;
+  const replayLink = p.replay
+    ? `<a class="btn btn-small" href="${escapeHtml(p.replay)}" target="_blank" rel="noopener" download>Repetición</a>`
+    : '';
   return `
     <div class="match-card row-enter" style="animation-delay:${(order || 0) * 40}ms">
       <div class="match-teams">
@@ -1829,6 +1834,7 @@ function matchCardHtml(p, order){
       </div>
       <div class="match-footer">
         <span class="match-meta">${p.horario || ''}</span>
+        ${replayLink}
         ${adminInputs}
       </div>
     </div>`;
@@ -1842,10 +1848,12 @@ function attachMatchAdminHandlers(){
       const gl = card.querySelector('.scoreLocal').value;
       const gv = card.querySelector('.scoreVisitante').value;
       const horario = card.querySelector('.scoreHorario').value.trim();
+      const replay = card.querySelector('.scoreReplay').value.trim();
       TORNEO_ROOT.child('partidos').child(id).update({
         golesLocal: gl === '' ? null : parseInt(gl, 10),
         golesVisitante: gv === '' ? null : parseInt(gv, 10),
         horario,
+        replay,
       });
       showToast('Guardado ✓', 'success');
     });
