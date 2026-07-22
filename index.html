@@ -144,6 +144,13 @@
     font-family:'Oswald', sans-serif; letter-spacing: 0.01em;
   }
 
+  .queja-card{
+    padding: 12px 16px; background: var(--surface-2); border: 1px solid var(--edge);
+    border-radius: 8px; margin-bottom: 8px;
+  }
+  .queja-fecha{ font-size: 11px; color: var(--text-dim); margin: 0 0 6px; }
+  .queja-texto{ font-size: 13.5px; margin: 0; white-space: pre-wrap; }
+
   .stat-strip{ display:flex; gap: 30px; flex-wrap:wrap; justify-content:center; margin: 20px 0 6px; }
   .stat-chip{ text-align:center; }
   .stat-chip .num{ font-family:'Cinzel', serif; font-weight:700; font-size: 28px; color: var(--silver-bright); }
@@ -514,6 +521,30 @@
   }
   #commentModal textarea{ min-height: 90px; resize: vertical; }
   .modal-actions{ display:flex; justify-content:flex-end; gap: 8px; margin-top: 18px; }
+
+  .modal-overlay{
+    position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+    display:flex; align-items:center; justify-content:center; z-index: 10000;
+    animation: fadeIn .2s ease;
+  }
+  .modal-overlay.hidden{ display:none; }
+  .modal-overlay .modal{
+    width: min(440px, 92vw);
+    background: linear-gradient(160deg, var(--surface), var(--surface-2));
+    border: 1px solid var(--edge-strong); border-radius: 14px;
+    padding: 26px 26px 22px;
+    animation: popIn .25s cubic-bezier(.2,.8,.2,1) both;
+  }
+  .modal-overlay .modal h3{
+    font-family:'Cinzel', serif; color: var(--silver-bright); font-size: 17px;
+    letter-spacing: 0.03em; margin: 0 0 10px; text-transform: uppercase;
+  }
+  .modal-overlay .modal textarea{
+    width:100%; background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--edge); border-radius: 6px; padding: 9px 10px;
+    font-family:'Oswald', sans-serif; font-size: 13.5px; min-height: 110px; resize: vertical;
+    margin-top: 8px;
+  }
   .auth-error{
     background: rgba(217,117,106,0.12); border: 1px solid rgba(217,117,106,0.4);
     color: #e08a80; font-size: 12.5px; padding: 9px 12px; border-radius: 6px;
@@ -597,6 +628,9 @@
   .topbar-ticker{ display:flex; align-items:center; gap: 10px; flex-wrap:wrap; }
   .topbar-item b{ color: var(--silver-bright); }
   .topbar-sep{ color: var(--edge-strong); }
+  .topbar-links{ display:flex; align-items:center; gap: 10px; flex-wrap:wrap; }
+  .topbar-links a{ color: var(--text-dim); text-decoration:none; cursor:pointer; transition: color .15s ease; }
+  .topbar-links a:hover{ color: var(--silver-bright); }
 
   .topbar-auth{ display:flex; align-items:center; gap: 10px; text-transform:none; letter-spacing:0.02em; }
   .topbar-login-btn{
@@ -794,6 +828,11 @@
       <span class="topbar-item" id="topBarTemporada">TEMPORADA 2026</span>
       <span class="topbar-sep">·</span>
       <span class="topbar-item" id="topBarProximo">Bienvenidos a Prime Hax</span>
+    </div>
+    <div class="topbar-links">
+      <a onclick="showTab('reglas')">📜 Reglamento</a>
+      <span class="topbar-sep">|</span>
+      <a href="https://discord.gg/xFxYkQP9p" target="_blank" rel="noopener">💬 Discord</a>
     </div>
     <div class="topbar-auth" id="topbarAuth"></div>
   </div>
@@ -1201,6 +1240,13 @@ BRAX!: C"></textarea>
       <div id="vinculosList"></div>
       <p class="empty-note hidden" id="vinculosEmpty">Todavía no hay cuentas registradas.</p>
     </div>
+
+    <div class="panel admin-only" style="width:min(700px,96vw);">
+      <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-2px;margin-right:6px"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z"/></svg>Buzón de quejas y bugs (privado, solo vos lo ves)</h2>
+      <p class="admin-note" style="margin-bottom:14px;">Los mensajes se envían de forma anónima — no queda registrado quién los mandó.</p>
+      <div id="quejasList"></div>
+      <p class="empty-note hidden" id="quejasEmpty">No hay mensajes por ahora.</p>
+    </div>
   </div>
 
   <div id="pinGate" class="hidden">
@@ -1218,16 +1264,31 @@ BRAX!: C"></textarea>
     <div class="footer-inner">
       <div class="footer-brand">
         <div class="footer-brand-name">PRIME HAX</div>
-        <p class="footer-tagline">La competencia oficial de Haxball.</p>
+        <p class="footer-tagline">La liga oficial de la comunidad Prime Haxball.</p>
       </div>
       <nav class="footer-links">
         <a href="https://discord.gg/xFxYkQP9p" target="_blank" rel="noopener">Discord</a>
-        <span class="sep">|</span>
+        <span class="sep">•</span>
         <a onclick="showTab('reglas')">Reglamento</a>
+        <span class="sep">•</span>
+        <a onclick="openQuejaModal()">Enviar una queja o reportar un bug</a>
       </nav>
     </div>
-    <p class="footer-copy">© 2026 Prime Hax · Todos los derechos reservados</p>
+    <p class="footer-copy">© 2026 Prime Hax<br/>Desarrollado por Mark</p>
   </footer>
+
+  <div class="modal-overlay hidden" id="quejaModal">
+    <div class="modal">
+      <h3>Enviar una queja o reportar un bug</h3>
+      <p class="admin-note">Tu mensaje se envía de forma anónima. Nadie va a saber quién lo mandó, ni siquiera el admin.</p>
+      <textarea id="quejaTextarea" placeholder="Contanos qué pasó..." maxlength="2000"></textarea>
+      <div class="modal-actions">
+        <button class="btn secondary" onclick="closeQuejaModal()">Cancelar</button>
+        <button class="btn" onclick="enviarQueja()">Enviar</button>
+      </div>
+      <p class="help" id="quejaStatus"></p>
+    </div>
+  </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -1261,6 +1322,7 @@ const EMAILS_ROOT = db.ref('emails'); // privado, solo lo puede escribir el due�
 const USERNAMES_ROOT = db.ref('usernames'); // mapeo nombreDeUsuario -> email, para poder loguearse sin el mail
 const FORO_ROOT = TORNEO_ROOT.child('foro');
 const ESCUDOS_ROOT = db.ref('escudos'); // compartido con draft-equipos.html
+const QUEJAS_ROOT = db.ref('quejas'); // buzón anónimo, solo el admin puede leerlo
 
 let torneoState = {};
 let draftState = null;
@@ -2258,6 +2320,29 @@ function closeCommentModal(){
   document.getElementById('commentModalOverlay').classList.add('hidden');
 }
 
+function openQuejaModal(){
+  document.getElementById('quejaTextarea').value = '';
+  document.getElementById('quejaStatus').textContent = '';
+  document.getElementById('quejaModal').classList.remove('hidden');
+}
+
+function closeQuejaModal(){
+  document.getElementById('quejaModal').classList.add('hidden');
+}
+
+function enviarQueja(){
+  const statusEl = document.getElementById('quejaStatus');
+  const texto = document.getElementById('quejaTextarea').value.trim();
+  if (!texto) { statusEl.textContent = 'Escribí algo antes de enviar.'; return; }
+  QUEJAS_ROOT.push({ texto, fecha: Date.now() })
+    .then(() => {
+      statusEl.textContent = '';
+      closeQuejaModal();
+      showToast('Enviado, gracias ✓', 'success');
+    })
+    .catch(() => { statusEl.textContent = 'No se pudo enviar. Probá de nuevo.'; });
+}
+
 function renderCommentModalBody(){
   const body = document.getElementById('commentModalBody');
   if (!body) return;
@@ -3185,6 +3270,7 @@ document.getElementById('pinBtn').addEventListener('click', () => {
     document.body.classList.add('is-admin');
     document.getElementById('pinGate').classList.add('hidden');
     renderAll();
+    renderQuejas();
     if (currentUser && currentUser.uid === ADMIN_UID) {
       showToast('Modo admin activado ✓', 'success');
     } else {
@@ -3194,6 +3280,34 @@ document.getElementById('pinBtn').addEventListener('click', () => {
     showToast('PIN incorrecto', 'error');
   }
 });
+
+function renderQuejas(){
+  const list = document.getElementById('quejasList');
+  const emptyEl = document.getElementById('quejasEmpty');
+  if (!list || !isAdmin) return;
+  QUEJAS_ROOT.once('value').then((snap) => {
+    const quejas = snap.val() || {};
+    const rows = Object.keys(quejas)
+      .map((id) => ({ id, ...quejas[id] }))
+      .sort((a, b) => (b.fecha || 0) - (a.fecha || 0));
+    if (rows.length === 0) {
+      list.innerHTML = '';
+      emptyEl.classList.remove('hidden');
+      return;
+    }
+    emptyEl.classList.add('hidden');
+    list.innerHTML = rows.map((r) => `
+      <div class="queja-card">
+        <p class="queja-fecha">${r.fecha ? new Date(r.fecha).toLocaleString('es-AR') : ''}</p>
+        <p class="queja-texto">${escapeHtml(r.texto || '')}</p>
+      </div>
+    `).join('');
+  }).catch(() => {
+    list.innerHTML = '';
+    emptyEl.classList.remove('hidden');
+    emptyEl.textContent = 'No se pudo cargar: iniciá sesión con tu cuenta de admin (además del PIN) para poder leerlas.';
+  });
+}
 
 function renderAdminAuthWarning(){
   const el = document.getElementById('adminAuthWarning');
