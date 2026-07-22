@@ -575,6 +575,12 @@ function sanitizeKey(name){
   return (name || '').replace(/[.#$/\[\]]/g, '_');
 }
 
+function escapeHtml(str){
+  return (str || '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+
 const CREST_PLACEHOLDER_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z"/></svg>';
 
 function crestHtml(teamName){
@@ -723,7 +729,7 @@ function renderAdminCrests(){
       <div class="admin-crest-item">
         ${crestHtml(team)}
         <span title="${team}">${team}</span>
-        <input type="file" accept="image/*" data-team-key="${key}" id="crestInput${i}" />
+        <input type="file" accept="image/*" data-team-key="${escapeHtml(key)}" id="crestInput${i}" />
       </div>`;
   }).join('');
 
@@ -748,7 +754,7 @@ function renderRenameSelect(){
     return;
   }
   const current = select.value;
-  select.innerHTML = state.teams.map((t) => `<option value="${t}">${t}</option>`).join('');
+  select.innerHTML = state.teams.map((t) => `<option value="${escapeHtml(t)}">${t}</option>`).join('');
   if (state.teams.includes(current)) select.value = current;
 }
 
@@ -812,7 +818,7 @@ function renderManualAddSelect(){
   const current = select.value;
   select.innerHTML = state.teams.map((t) => {
     const roster = (state.confirmedRosters && state.confirmedRosters[t]) || [];
-    return `<option value="${t}">${t} (${roster.length}/${state.rosterSize})</option>`;
+    return `<option value="${escapeHtml(t)}">${t} (${roster.length}/${state.rosterSize})</option>`;
   }).join('');
   if (state.teams.includes(current)) select.value = current;
 }

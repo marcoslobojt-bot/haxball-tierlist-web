@@ -1624,7 +1624,7 @@ function renderStatsTable(kind, field, tbody, emptyEl){
       <td>${r.name}</td>
       <td>${r.equipo || '—'}</td>
       <td class="num">${r[field] || 0}</td>
-      <td class="admin-only"><button class="btn btn-small btn-danger deleteStatBtn" data-key="${r.key}">Borrar</button></td>
+      <td class="admin-only"><button class="btn btn-small btn-danger deleteStatBtn" data-key="${escapeHtml(r.key)}">Borrar</button></td>
     </tr>
   `).join('');
 
@@ -1639,7 +1639,7 @@ function renderStatsTable(kind, field, tbody, emptyEl){
 function renderStatsForms(){
   const players = getAllPlayers();
   const options = players
-    .map((p) => `<option value="${p.name}">${p.name} (${p.team})</option>`)
+    .map((p) => `<option value="${escapeHtml(p.name)}">${p.name} (${p.team})</option>`)
     .join('');
 
   const formHtml = (idPrefix) => `
@@ -1697,7 +1697,7 @@ function sanitizeKey(name){
 
 function renderPartidosSelects(){
   const teams = getTeams();
-  const opts = teams.map((t) => `<option value="${t}">${t}</option>`).join('');
+  const opts = teams.map((t) => `<option value="${escapeHtml(t)}">${t}</option>`).join('');
   const localSel = document.getElementById('partidoLocalInput');
   const visSel = document.getElementById('partidoVisitanteInput');
   if (localSel.dataset.count !== String(teams.length)) {
