@@ -201,6 +201,10 @@
   }
   .match-admin input.scoreHorario{ width: 92px; text-align:left; padding: 5px 8px; }
   .match-admin input.scoreReplay{ width: 170px; text-align:left; padding: 5px 8px; }
+  .match-admin input.scoreReplayFile{
+    width: 130px; background: none; border: 1px dashed var(--edge-strong); border-radius: 4px;
+    color: var(--text-dim); padding: 4px 6px; font-size: 10.5px;
+  }
 
   /* ---- Formularios de admin ---- */
   .admin-only{ display:none; }
@@ -1816,6 +1820,7 @@ function matchCardHtml(p, order){
     <span class="match-admin admin-only" data-id="${p.id}">
       <input type="text" class="scoreHorario" value="${p.horario || ''}" placeholder="Horario (ej. 21:00)" />
       <input type="text" class="scoreReplay" value="${p.replay ? escapeHtml(p.replay) : ''}" placeholder="Link de repetición (.hbr2)" />
+      <input type="file" class="scoreReplayFile" accept=".hbr2,.hbr" title="O subí el archivo directo" />
       <input type="number" min="0" class="scoreLocal" value="${p.golesLocal != null ? p.golesLocal : ''}" placeholder="-" />
       <span>-</span>
       <input type="number" min="0" class="scoreVisitante" value="${p.golesVisitante != null ? p.golesVisitante : ''}" placeholder="-" />
@@ -1823,7 +1828,7 @@ function matchCardHtml(p, order){
       <button class="btn btn-small btn-danger deleteMatchBtn" data-id="${p.id}">Borrar</button>
     </span>`;
   const replayLink = p.replay
-    ? `<a class="btn btn-small" href="${escapeHtml(p.replay)}" target="_blank" rel="noopener" download>Repetición</a>`
+    ? `<a class="btn btn-small" href="${escapeHtml(p.replay)}" target="_blank" rel="noopener" download="${escapeHtml(p.local)}_vs_${escapeHtml(p.visitante)}.hbr2">Repetición</a>`
     : '';
   return `
     <div class="match-card row-enter" style="animation-delay:${(order || 0) * 40}ms">
@@ -1842,20 +1847,45 @@ function matchCardHtml(p, order){
 
 function attachMatchAdminHandlers(){
   document.querySelectorAll('.saveScoreBtn').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const id = btn.dataset.id;
       const card = btn.closest('.match-admin');
       const gl = card.querySelector('.scoreLocal').value;
       const gv = card.querySelector('.scoreVisitante').value;
       const horario = card.querySelector('.scoreHorario').value.trim();
-      const replay = card.querySelector('.scoreReplay').value.trim();
+      const fileInput = card.querySelector('.scoreReplayFile');
+      const file = fileInput.files[0];
+      let replay = card.querySelector('.scoreReplay').value.trim();
+
+      if (file) {
+        if (file.size > 6 * 1024 * 1024) {
+          showToast('El archivo es muy pesado (máximo ~6 MB).', 'error');
+          return;
+        }
+        btn.disabled = true;
+        btn.textContent = 'Subiendo…';
+        try {
+          replay = await fileToDataUrl(file);
+        } catch (err) {
+          showToast('No se pudo leer el archivo.', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Guardar';
+          return;
+        }
+      }
+
       TORNEO_ROOT.child('partidos').child(id).update({
         golesLocal: gl === '' ? null : parseInt(gl, 10),
         golesVisitante: gv === '' ? null : parseInt(gv, 10),
         horario,
         replay,
+      }).then(() => {
+        showToast('Guardado ✓', 'success');
+        if (file) { fileInput.value = ''; }
+      }).finally(() => {
+        btn.disabled = false;
+        btn.textContent = 'Guardar';
       });
-      showToast('Guardado ✓', 'success');
     });
   });
   document.querySelectorAll('.deleteMatchBtn').forEach((btn) => {
@@ -1929,6 +1959,15 @@ function resizeImageFile(file, maxWidth, quality){
       img.onerror = () => reject(new Error('No se pudo leer la imagen'));
       img.src = e.target.result;
     };
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function fileToDataUrl(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
     reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
     reader.readAsDataURL(file);
   });
