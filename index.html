@@ -999,7 +999,7 @@
     <div class="panel">
       <h2><svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:6px"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg>Goleadores</h2>
       <table class="data-table" id="goleadoresTable">
-        <thead><tr><th>Pos</th><th>Jugador</th><th>Equipo</th><th style="text-align:center;">Goles</th></tr></thead>
+        <thead><tr><th>Pos</th><th>Jugador</th><th>Equipo</th><th style="text-align:center;">Goles</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
       <p class="empty-note hidden" id="goleadoresEmpty">Todavía no hay goles cargados.</p>
@@ -1012,7 +1012,7 @@
     <div class="panel">
       <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-2px;margin-right:6px"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>Asistidores</h2>
       <table class="data-table" id="asistidoresTable">
-        <thead><tr><th>Pos</th><th>Jugador</th><th>Equipo</th><th style="text-align:center;">Asistencias</th></tr></thead>
+        <thead><tr><th>Pos</th><th>Jugador</th><th>Equipo</th><th style="text-align:center;">Asistencias</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
       <p class="empty-note hidden" id="asistidoresEmpty">Todavía no hay asistencias cargadas.</p>
@@ -1608,7 +1608,7 @@ document.getElementById('saveInfoBtn').addEventListener('click', () => {
 function renderStatsTable(kind, field, tbody, emptyEl){
   const stats = torneoState.stats || {};
   const rows = Object.keys(stats)
-    .map((n) => ({ name: n, ...stats[n] }))
+    .map((n) => ({ key: n, name: n, ...stats[n] }))
     .filter((s) => (s[field] || 0) > 0)
     .sort((a, b) => (b[field] || 0) - (a[field] || 0));
 
@@ -1624,8 +1624,16 @@ function renderStatsTable(kind, field, tbody, emptyEl){
       <td>${r.name}</td>
       <td>${r.equipo || '—'}</td>
       <td class="num">${r[field] || 0}</td>
+      <td class="admin-only"><button class="btn btn-small btn-danger deleteStatBtn" data-key="${r.key}">Borrar</button></td>
     </tr>
   `).join('');
+
+  tbody.querySelectorAll('.deleteStatBtn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!confirm('¿Borrar esta estadística por completo?')) return;
+      handleAdminWrite(TORNEO_ROOT.child('stats').child(btn.dataset.key).remove(), 'Estadística borrada ✓');
+    });
+  });
 }
 
 function renderStatsForms(){
