@@ -189,6 +189,8 @@
   .fecha-heading h3{ font-family:'Cinzel', serif; font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--silver-bright); margin:0; }
   .fecha-tag{ font-size: 9.5px; padding: 2px 9px; border-radius: 100px; background: var(--tierB); color:#eafff2; font-weight:700; letter-spacing: 0.05em; text-transform:uppercase; }
   .fecha-dia{ font-family:'Oswald', sans-serif; font-size: 12px; color: var(--text-dim); }
+  .fecha-playoff{ margin-top: 34px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.09); }
+  .fecha-playoff h3{ font-size: 17px; letter-spacing: 0.12em; color: var(--tierC); }
   .match-card{
     display:flex; flex-direction: column; gap: 8px;
     width: 100%; max-width: 700px;
@@ -1067,7 +1069,8 @@
       <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px;margin-right:6px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Agregar partido</h2>
       <div class="admin-block">
         <div class="form-row">
-          <div><label>Fecha (número)</label><input type="number" id="partidoFechaInput" min="1" value="1" /></div>
+          <div><label>Instancia</label><select id="partidoFaseInput"><option value="grupos">Fase de grupos</option><option value="90">Semifinal</option><option value="91">Final</option></select></div>
+          <div id="partidoFechaWrap"><label>Fecha (número)</label><input type="number" id="partidoFechaInput" min="1" value="1" /></div>
           <div><label>Equipo local</label><select id="partidoLocalInput"></select></div>
           <div><label>Equipo visitante</label><select id="partidoVisitanteInput"></select></div>
           <div><label>Horario (opcional)</label><input type="text" id="partidoHorarioInput" placeholder="Vie 21:00" /></div>
@@ -1326,6 +1329,14 @@ const FORO_ROOT = TORNEO_ROOT.child('foro');
 const ESCUDOS_ROOT = db.ref('escudos'); // compartido con draft-equipos.html
 const QUEJAS_ROOT = db.ref('quejas'); // buzón anónimo, solo el admin puede leerlo
 
+/* Playoffs: se guardan como partidos normales pero con números de fecha reservados,
+   así ordenan siempre al final y quedan fuera de las tablas de zona. */
+const FASE_SEMIS = 90;
+const FASE_FINAL = 91;
+const FASES = { [FASE_SEMIS]: 'Semifinales', [FASE_FINAL]: 'Final' };
+const esPlayoff = (f) => Number(f) >= FASE_SEMIS;
+const nombreFecha = (f) => FASES[f] || `Fecha ${f}`;
+
 let torneoState = {};
 let draftState = null;
 let escudosState = {};
@@ -1502,7 +1513,7 @@ function renderHome(){
   const pendientes = partidos.filter((p) => p.golesLocal == null || p.golesVisitante == null)
     .sort((a, b) => (a.fecha || 0) - (b.fecha || 0));
   document.getElementById('previewProximo').textContent = pendientes.length
-    ? `${pendientes[0].local} vs ${pendientes[0].visitante} (Fecha ${pendientes[0].fecha})`
+    ? `${pendientes[0].local} vs ${pendientes[0].visitante} (${nombreFecha(pendientes[0].fecha)})`
     : 'Sin partidos pendientes';
 
   document.getElementById('statusInicio').textContent = info.inicio || 'A confirmar';
@@ -1772,13 +1783,20 @@ function renderPartidosSelects(){
   }
 }
 
+document.getElementById('partidoFaseInput').addEventListener('change', (e) => {
+  document.getElementById('partidoFechaWrap').style.display = e.target.value === 'grupos' ? '' : 'none';
+});
+
 document.getElementById('addPartidoBtn').addEventListener('click', () => {
   const teams = getTeams();
   if (teams.length === 0) {
     showToast('Todavía no hay equipos cargados (cargalos primero desde el Draft).', 'error');
     return;
   }
-  const fecha = parseInt(document.getElementById('partidoFechaInput').value, 10) || 1;
+  const fase = document.getElementById('partidoFaseInput').value;
+  const fecha = fase === 'grupos'
+    ? (parseInt(document.getElementById('partidoFechaInput').value, 10) || 1)
+    : parseInt(fase, 10);
   const local = document.getElementById('partidoLocalInput').value;
   const visitante = document.getElementById('partidoVisitanteInput').value;
   const horario = document.getElementById('partidoHorarioInput').value.trim();
@@ -1789,7 +1807,7 @@ document.getElementById('addPartidoBtn').addEventListener('click', () => {
   TORNEO_ROOT.child('partidos').push({
     fecha, local, visitante, horario, golesLocal: null, golesVisitante: null,
   });
-  showToast(`Partido agregado: ${local} vs ${visitante} (Fecha ${fecha}) ✓`, 'success');
+  showToast(`Partido agregado: ${local} vs ${visitante} (${nombreFecha(fecha)}) ✓`, 'success');
 });
 
 document.getElementById('loadFixtureBulkBtn').addEventListener('click', () => {
@@ -1876,7 +1894,7 @@ function renderPartidos(){
     const dia = fechasInfo[f] ? `<span class="fecha-dia">${escapeHtml(fechasInfo[f])}</span>` : '';
     const matches = porFecha[f].map((p, mi) => matchCardHtml(p, fi * 3 + mi)).join('');
     return `
-      <div class="fecha-heading row-enter" style="animation-delay:${fi * 60}ms"><h3>Fecha ${f}</h3>${dia}${tag}</div>
+      <div class="fecha-heading row-enter${esPlayoff(f) ? ' fecha-playoff' : ''}" style="animation-delay:${fi * 60}ms"><h3>${nombreFecha(f)}</h3>${dia}${tag}</div>
       ${matches}
     `;
   }).join('');
@@ -1892,7 +1910,7 @@ function renderFechasInfoForm(fechas){
   container.innerHTML = fechas.map((f) => `
     <div class="form-row" style="margin-bottom:10px;">
       <div style="flex:1;">
-        <label>Fecha ${f}</label>
+        <label>${nombreFecha(f)}</label>
         <input type="text" class="fechaDiaInput" data-fecha="${f}" value="${fechasInfo[f] ? escapeHtml(fechasInfo[f]) : ''}" placeholder="Ej: Martes 21/07" />
       </div>
     </div>
@@ -2646,7 +2664,7 @@ document.getElementById('saveTierlistBtn').addEventListener('click', () => {
 /* ---------------- POSICIONES ---------------- */
 function renderPosiciones(){
   const teams = getTeams();
-  const partidos = getPartidosArray().filter((p) => p.golesLocal != null && p.golesVisitante != null);
+  const partidos = getPartidosArray().filter((p) => p.golesLocal != null && p.golesVisitante != null && !esPlayoff(p.fecha));
   const tbodyA = document.getElementById('posicionesTableA').querySelector('tbody');
   const tbodyB = document.getElementById('posicionesTableB').querySelector('tbody');
   const emptyEl = document.getElementById('posicionesEmpty');
