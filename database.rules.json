@@ -1,0 +1,17 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "prime": {
+      ".read": true,
+      ".write": "auth != null && root.child('config/admins').child(auth.uid).val() === true"
+    },
+    "config": {
+      "admins": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid"
+        }
+      }
+    }
+  }
+}
