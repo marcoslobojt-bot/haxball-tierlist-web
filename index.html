@@ -401,7 +401,8 @@ const ligasArr = () => Object.entries(DATA.ligas||{}).map(([id,l])=>({id,...l}))
 const partidosArr = () => Object.entries(DATA.partidos||{}).map(([id,p])=>({id,...p})).sort((a,b)=>dt(a)-dt(b));
 const liga = id => { const l=(DATA.ligas||{})[id]; return l ? {id,...l} : null; };
 const jug = id => (DATA.jugadores||{})[id] || {nombre:id, discord:''};
-const cierreFirma = p => new Date(dt(p).getTime() - ((liga(p.liga)||{}).firmaMin||30)*60000);
+const firmaMin = p => { const l=liga(p.liga); return l && l.firmaMin!==undefined && l.firmaMin!=='' ? +l.firmaMin : 30; };
+const cierreFirma = p => new Date(dt(p).getTime() - firmaMin(p)*60000);
 const plantel = l => Object.entries(l.plantel||{}).map(([id,x])=>({id,...x,...{nombre:jug(id).nombre, discord:x.nick||jug(id).discord}}));
 function falta(ms){
   if (ms <= 0) return null;
@@ -436,7 +437,8 @@ function cardPartido(p, full=true){
     if (full && p.replay) extra += `<div class="btns"><button class="btn sm ghost" data-replay="${esc(p.id)}">Descargar repetición</button><a class="muted" style="align-self:center" href="https://www.haxball.com/replay" target="_blank" rel="noopener">Se mira en haxball.com/replay</a></div>`;
   } else {
     const c = cierreFirma(p);
-    extra += `<div class="extra">Firmas hasta las <b>${hm(c)}</b> <span class="muted" data-cd="${c.getTime()}"></span></div>`;
+    extra += firmaMin(p) ? `<div class="extra">Firmas hasta las <b>${hm(c)}</b> <span class="muted" data-cd="${c.getTime()}"></span></div>`
+      : `<div class="extra">Se firma en la sala. Empieza a las <b>${esc(p.hora)}</b> <span class="muted" data-cd="${c.getTime()}"></span></div>`;
     if (full && p.nota) extra += `<div class="extra muted">${esc(p.nota)}</div>`;
     const links = [];
     const lf = liga(p.liga);
@@ -508,7 +510,7 @@ function pageInicio(){
         <div class="ctx"><img src="${esc(l?.logo)}" alt="">Próximo partido en ${esc(l?.nombre)}, fecha ${esc(prox.jornada||'')}</div>
         <div class="versus"><span>${prox.condicion==='local'?'Recibimos a':'Visitamos a'}</span>${esc(prox.rival)}</div>
         <div class="cuando">${fLarga(prox)}, ${esc(prox.hora)}${prox.sala?' en '+esc(prox.sala):''}</div>
-        <div class="cd" data-cdbox="${c.getTime()}">Firmas hasta las ${hm(c)} <span data-cd="${c.getTime()}"></span></div>
+        <div class="cd" data-cdbox="${c.getTime()}">${firmaMin(prox)?`Firmas hasta las ${hm(c)}`:`Se firma en la sala, empieza ${esc(prox.hora)}`} <span data-cd="${c.getTime()}"></span></div>
         <div class="btns">${btn}</div>
       </div></div></div>`;
   } else {
@@ -596,7 +598,7 @@ function pageLiga(id){
   const prox = ps.filter(p=>!jugado(p)), jug_ = ps.filter(jugado).reverse();
   const total = ins.length + pend.length;
   const datos = [
-    `<div class="dato"><div class="muted">Firma</div><div class="v">${esc(l.firmaMin>=60? (l.firmaMin/60)+' h':l.firmaMin+' min')}</div><div class="muted">antes del partido</div></div>`,
+    `<div class="dato"><div class="muted">Firma</div><div class="v">${l.firmaMin?esc(l.firmaMin>=60?(l.firmaMin/60)+' h':l.firmaMin+' min'):'En la sala'}</div><div class="muted">${l.firmaMin?'antes del partido':'antes de empezar'}</div></div>`,
     `<div class="dato"><div class="muted">Plantel</div><div class="v ${l.cupo&&total>l.cupo?'warn':''}">${ins.length}${l.cupo?' / '+l.cupo:''}</div><div class="muted">${pend.length?(pend.length===1?'falta anotarse 1':'faltan anotarse '+pend.length):'anotados'}</div></div>`,
     `<div class="dato"><div class="muted">Anti-DF usados</div><div class="v">${esc(l.antiDfUsados||0)} / ${esc(l.antiDfMax||0)}</div><div class="muted">en el torneo</div></div>`,
     l.dfMax ? `<div class="dato"><div class="muted">DF en contra</div><div class="v ${l.dfContra>=2?'bad':''}">${esc(l.dfContra||0)} / ${esc(l.dfMax)}</div><div class="muted">con ${esc(l.dfMax)} nos expulsan</div></div>` : ''
@@ -751,7 +753,7 @@ function admLigas(){
     <label class="full">Canal de firmas<input name="firmaUrl" value="${esc(l.firmaUrl)}"></label>
     <label class="full">Aviso de mercado (vacío si no hay)<input name="mercado" value="${esc(l.mercado)}"></label>
     <label>División<input name="division" value="${esc(l.division)}"></label>
-    <label>Minutos de cierre de firma<input name="firmaMin" type="number" value="${esc(l.firmaMin)}"></label>
+    <label>Cierre de firma, en minutos antes (0 = se firma en la sala)<input name="firmaMin" type="number" min="0" value="${esc(l.firmaMin)}"></label>
     <label>Cupo del plantel<input name="cupo" type="number" value="${esc(l.cupo)}"></label>
     <label>Anti-DF usados<input name="antiDfUsados" type="number" min="0" value="${esc(l.antiDfUsados||0)}"></label>
     <label>Anti-DF máximo<input name="antiDfMax" type="number" min="0" value="${esc(l.antiDfMax||0)}"></label>
@@ -902,7 +904,7 @@ function render(){
 }
 function tick(){
   const now = Date.now();
-  document.querySelectorAll('[data-cd]').forEach(el=>{ const f=falta(+el.dataset.cd-now); el.textContent = f ? `(cierra en ${f})` : '(ya cerró)'; });
+  document.querySelectorAll('[data-cd]').forEach(el=>{ const f=falta(+el.dataset.cd-now); el.textContent = f ? `(en ${f})` : '(ya pasó)'; });
   document.querySelectorAll('[data-cdbox]').forEach(el=>{ const ms=+el.dataset.cdbox-now; el.classList.toggle('urg', ms>0 && ms<3*3600e3); });
 }
 setInterval(tick, 30000);
