@@ -692,7 +692,7 @@ function pageAdmin(){
   if (!IS_ADMIN) return `<h2>Sin permiso</h2><p class="muted">La cuenta ${esc(USER.email||USER.uid)} no está en la lista de admins. UID: <code>${esc(USER.uid)}</code></p><button class="btn ghost" data-act="logout">Salir</button>`;
   if (!DATA) return `<h2>Base vacía</h2><p class="muted">Todavía no hay datos en <code>/prime</code>. Cargá los datos iniciales (las 3 ligas, planteles, fecha 1 y reglamentos).</p><button class="btn" data-act="seed">Cargar datos iniciales</button>`;
   const alertas = ligasArr().map(l=>{ const d=diasHasta(l.discordVence); if(d===null) return ''; if(d<0) return `<div class="aviso">El link de Discord de <b>${esc(l.nombre)}</b> venció. Pedí uno nuevo y cargalo en Ligas.</div>`; if(d<=7) return `<div class="aviso">El link de Discord de <b>${esc(l.nombre)}</b> vence en ${d} día${d===1?'':'s'}.</div>`; return ''; }).join('');
-  const tabs = [['partidos','Partidos'],['ligas','Ligas'],['planteles','Planteles'],['jugadores','Jugadores'],['tablas','Tablas']]
+  const tabs = [['partidos','Partidos'],['ligas','Ligas'],['planteles','Planteles'],['jugadores','Jugadores'],['tablas','Tablas'],['reglas','Reglamentos']]
     .map(([k,t])=>`<button class="${ADM.tab===k?'on':''}" data-tab="${k}">${t}</button>`).join('');
   let body = '';
   if (ADM.tab==='partidos') body = admPartidos();
@@ -700,6 +700,7 @@ function pageAdmin(){
   if (ADM.tab==='planteles') body = admPlanteles();
   if (ADM.tab==='jugadores') body = admJugadores();
   if (ADM.tab==='tablas') body = admTablas();
+  if (ADM.tab==='reglas') body = admReglas();
   return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">Panel</h2><button class="btn ghost sm" data-act="logout">Salir</button></div>
     ${alertas?`<div class="avisos" style="margin-top:14px">${alertas}</div>`:''}
     <div class="tabs">${tabs}</div>${body}`;
@@ -782,6 +783,7 @@ function admLigas(){
     <label>Anti-DF máximo<input name="antiDfMax" type="number" min="0" value="${esc(l.antiDfMax||0)}"></label>
     <label>DF en contra<input name="dfContra" type="number" min="0" value="${esc(l.dfContra||0)}"></label>
     <label>Tope de DF (0 = sin tope)<input name="dfMax" type="number" min="0" value="${esc(l.dfMax||0)}"></label>
+    <label>Reglamento<select name="reglamento"><option value="">Sin reglamento</option>${Object.entries(DATA.reglamentos||{}).map(([k,r])=>opt(k,r.titulo,l.reglamento)).join('')}</select></label>
     <div class="full"><button class="btn" data-act="guardar-liga" data-id="${esc(l.id)}">Guardar ${esc(l.nombre)}</button></div>
   </div>`).join('');
 }
@@ -809,6 +811,20 @@ function admJugadores(){
     <div class="form" style="margin-top:14px"><h3 class="full">Agregar jugador</h3>
       <label>Nombre<input id="nj-n"></label><label>Usuario de Discord<input id="nj-d"></label>
       <div class="full btns" style="margin:0"><button class="btn ghost" data-act="agregar-jug">Agregar</button><button class="btn" data-act="guardar-jugs">Guardar cambios</button></div></div>`;
+}
+
+function admReglas(){
+  const forms = Object.entries(DATA.reglamentos||{}).map(([k,r])=>`<div class="form" style="margin-bottom:14px">
+    <label class="full">Título<input data-rt="${esc(k)}" value="${esc(r.titulo)}"></label>
+    <label class="full">Reglas clave, una por línea (son las que se muestran arriba en la página de la liga)
+      <textarea data-rc="${esc(k)}" rows="6">${esc((r.clave||[]).join('\n'))}</textarea></label>
+    <label class="full">Reglamento completo<textarea data-rx="${esc(k)}" rows="12">${esc(r.texto||'')}</textarea></label>
+    <div class="full"><button class="btn" data-act="guardar-regla" data-id="${esc(k)}">Guardar</button></div>
+  </div>`).join('');
+  return forms + `<div class="form"><h3 class="full">Agregar un reglamento</h3>
+    <label class="full">Título<input id="nr-titulo" placeholder="Reglamento Golden League"></label>
+    <div class="full"><button class="btn ghost" data-act="nuevo-reglamento">Crear</button>
+      <p class="muted">Después lo asignás a la liga en la pestaña Ligas.</p></div></div>`;
 }
 
 function admTablas(){
@@ -913,6 +929,15 @@ document.addEventListener('click', async e=>{
         logo:g('logo')||('assets/'+id+'.png')});
       toast('Liga creada'); render();
     }
+    if (a==='guardar-regla'){ const k=t.dataset.id;
+      await ref('reglamentos/'+k).set({titulo:document.querySelector(`[data-rt="${k}"]`).value.trim(),
+        clave:document.querySelector(`[data-rc="${k}"]`).value.split('\n').map(x=>x.trim()).filter(Boolean),
+        texto:document.querySelector(`[data-rx="${k}"]`).value.trim()});
+      toast('Reglamento guardado'); }
+    if (a==='nuevo-reglamento'){ const ti=$('#nr-titulo').value.trim(); if(!ti) return alert('Poné el título.');
+      let id=ti.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'').slice(0,20)||'reglamento';
+      while(DATA.reglamentos?.[id]) id+='2';
+      await ref('reglamentos/'+id).set({titulo:ti, clave:[], texto:''}); toast('Reglamento creado'); render(); }
     if (a==='guardar-tabla'){ const v=document.querySelector(`[data-tabla="${t.dataset.id}"]`).value.trim(); await ref('tablas/'+t.dataset.id).set(v||null); toast('Tabla guardada'); }
   } catch(err){ if(a==='login'||a==='login-google'){ const el=$('#lg-err'); if(el) el.textContent='No se pudo entrar: revisá el email y la contraseña.'; } else fail(err); }
 });
