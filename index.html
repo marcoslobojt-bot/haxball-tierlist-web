@@ -83,7 +83,10 @@ section{margin-top:44px}
 .liga-card{display:block;text-decoration:none;background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--liga);border-radius:12px;padding:18px}
 .liga-card:hover{border-color:var(--silver);border-top-color:var(--liga)}
 .liga-card .head{display:flex;gap:12px;align-items:center;margin-bottom:12px}
-.liga-card .head img{width:48px;height:48px;border-radius:8px;object-fit:cover}
+.liga-card .head img,.liga-card .head .sinlogo{width:48px;height:48px;border-radius:8px;object-fit:cover}
+.sinlogo{display:grid;place-items:center;background:var(--panel2);border:1px solid var(--liga,var(--line));color:var(--liga,var(--silver));font-family:var(--display);font-weight:900;font-size:1.6rem}
+.liga-top .sinlogo{width:104px;height:104px;border-radius:14px;font-size:3rem}
+.ctx .sinlogo{width:22px;height:22px;border-radius:4px;font-size:.9rem;display:inline-grid;vertical-align:-5px;margin-right:6px}
 .liga-card .row{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding:8px 0 0;margin-top:8px;font-size:.98rem}
 
 /* partidos */
@@ -401,6 +404,7 @@ const ligasArr = () => Object.entries(DATA.ligas||{}).map(([id,l])=>({id,...l}))
 const partidosArr = () => Object.entries(DATA.partidos||{}).map(([id,p])=>({id,...p})).sort((a,b)=>dt(a)-dt(b));
 const liga = id => { const l=(DATA.ligas||{})[id]; return l ? {id,...l} : null; };
 const jug = id => (DATA.jugadores||{})[id] || {nombre:id, discord:''};
+const logoImg = (l,cls='') => l.logo ? `<img ${cls?`class="${cls}" `:''}src="${esc(l.logo)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'sinlogo '+this.className,textContent:'${esc((l.nombre||'?')[0])}',style:'--liga:${esc(l.color)}'}))">` : `<span class="sinlogo ${cls}" style="--liga:${esc(l.color)}">${esc((l.nombre||'?')[0])}</span>`;
 const firmaMin = p => { const l=liga(p.liga); return l && l.firmaMin!==undefined && l.firmaMin!=='' ? +l.firmaMin : 30; };
 const cierreFirma = p => new Date(dt(p).getTime() - firmaMin(p)*60000);
 const plantel = l => Object.entries(l.plantel||{}).map(([id,x])=>({id,...x,...{nombre:jug(id).nombre, discord:x.nick||jug(id).discord}}));
@@ -507,7 +511,7 @@ function pageInicio(){
     hero = `<div class="hero" style="--liga:${esc(l?.color)}"><div class="hero-in">
       <img class="crest" src="assets/prime.png" alt="Escudo de Prime Hax">
       <div>
-        <div class="ctx"><img src="${esc(l?.logo)}" alt="">Próximo partido en ${esc(l?.nombre)}, fecha ${esc(prox.jornada||'')}</div>
+        <div class="ctx">${logoImg(l||{})}Próximo partido en ${esc(l?.nombre)}, fecha ${esc(prox.jornada||'')}</div>
         <div class="versus"><span>${prox.condicion==='local'?'Recibimos a':'Visitamos a'}</span>${esc(prox.rival)}</div>
         <div class="cuando">${fLarga(prox)}, ${esc(prox.hora)}${prox.sala?' en '+esc(prox.sala):''}</div>
         <div class="cd" data-cdbox="${c.getTime()}">${firmaMin(prox)?`Firmas hasta las ${hm(c)}`:`Se firma en la sala, empieza ${esc(prox.hora)}`} <span data-cd="${c.getTime()}"></span></div>
@@ -521,7 +525,7 @@ function pageInicio(){
       hero = `<div class="hero" style="--liga:${esc(l?.color)}"><div class="hero-in">
         <img class="crest" src="assets/prime.png" alt="Escudo de Prime Hax">
         <div>
-          <div class="ctx"><img src="${esc(l?.logo)}" alt="">Último partido, ${esc(l?.nombre)}</div>
+          <div class="ctx">${logoImg(l||{})}Último partido, ${esc(l?.nombre)}</div>
           <div class="versus"><span>${txt} contra</span>${esc(ult.rival)}</div>
           <div class="score">${esc(ult.gp)}–${esc(ult.gr)}${ult.tipo?` <span class="tag">${esc(ult.tipo)}</span>`:''}</div>
           <p class="muted">Todavía no hay próximos partidos cargados. Las ligas publican el fixture cada semana.</p>
@@ -536,7 +540,7 @@ function pageInicio(){
     const uTxt = u ? `${esc(u.gp)}–${esc(u.gr)} vs ${esc(u.rival)}` : 'Sin partidos';
     const nTxt = n ? `${fCorta(n)} ${esc(n.hora)} vs ${esc(n.rival)}` : 'A confirmar';
     return `<a class="liga-card" href="#/liga/${esc(l.id)}" style="--liga:${esc(l.color)}">
-      <div class="head"><img src="${esc(l.logo)}" alt=""><div><h3>${esc(l.nombre)}</h3><span class="muted">${esc(l.division)}${l.formato?', '+esc(l.formato):''}</span></div></div>
+      <div class="head">${logoImg(l)}<div><h3>${esc(l.nombre)}</h3><span class="muted">${esc(l.division)}${l.formato?', '+esc(l.formato):''}</span></div></div>
       <div class="row"><span class="muted">Último</span><span>${uTxt}</span></div>
       <div class="row"><span class="muted">Próximo</span><span>${nTxt}</span></div></a>`;
   }).join('');
@@ -605,7 +609,7 @@ function pageLiga(id){
   ].join('');
   const tabla = tablaHtml(id);
   return `<div class="liga-top" style="--liga:${esc(l.color)}">
-      <img src="${esc(l.logo)}" alt="Logo de ${esc(l.nombre)}">
+      ${logoImg(l)}
       <div><h1>${esc(l.nombreLargo||l.nombre)}</h1>
         <p class="muted">${esc(l.division)}${l.formato?', '+esc(l.formato):''}</p>
         <div class="btns">
@@ -746,7 +750,26 @@ function admChecks(p){
 }
 
 function admLigas(){
-  return ligasArr().map(l=>`<div class="form" data-liga="${esc(l.id)}" style="margin-bottom:14px;border-top:3px solid ${esc(l.color)}">
+  const nueva = `<div class="form" style="margin-bottom:18px;border-top:3px solid var(--silver)">
+    <h3 class="full">Agregar una liga</h3>
+    <label>Nombre corto<input id="nl-nombre" placeholder="Golden League"></label>
+    <label>Nombre largo (opcional)<input id="nl-largo"></label>
+    <label>División<input id="nl-div" placeholder="2da división"></label>
+    <label>Formato<input id="nl-formato" placeholder="x5"></label>
+    <label>Color<input id="nl-color" type="color" value="#E0B15A"></label>
+    <label>Orden en el sitio<input id="nl-orden" type="number" value="${ligasArr().length+1}"></label>
+    <label class="full">Link de Discord<input id="nl-discord"></label>
+    <label class="full">Canal de firmas<input id="nl-firma"></label>
+    <label>Cierre de firma en minutos<input id="nl-firmamin" type="number" min="0" value="0"></label>
+    <label>Cupo del plantel<input id="nl-cupo" type="number" value="20"></label>
+    <label>Anti-DF máximo<input id="nl-antidf" type="number" min="0" value="3"></label>
+    <label>Tope de DF (0 = sin tope)<input id="nl-dfmax" type="number" min="0" value="0"></label>
+    <label>Reglamento<select id="nl-reg"><option value="">Sin reglamento</option>${Object.entries(DATA.reglamentos||{}).map(([k,r])=>`<option value="${esc(k)}">${esc(r.titulo)}</option>`).join('')}</select></label>
+    <label>Archivo del logo<input id="nl-logo" placeholder="assets/golden.png"></label>
+    <div class="full"><button class="btn" data-act="nueva-liga">Crear liga</button>
+      <p class="muted">El plantel se carga después, en la pestaña Planteles. El logo hay que subirlo a la carpeta assets del repo.</p></div>
+  </div>`;
+  return nueva + ligasArr().map(l=>`<div class="form" data-liga="${esc(l.id)}" style="margin-bottom:14px;border-top:3px solid ${esc(l.color)}">
     <h3 class="full">${esc(l.nombre)}</h3>
     <label>Link de Discord<input name="discord" value="${esc(l.discord)}"></label>
     <label>El link vence el<input name="discordVence" type="date" value="${esc(l.discordVence)}"></label>
@@ -879,6 +902,17 @@ document.addEventListener('click', async e=>{
     if (a==='guardar-jugs'){ const up={};
       document.querySelectorAll('[data-jn]').forEach(i=>{ const id=i.dataset.jn; up[`jugadores/${id}/nombre`]=i.value.trim(); up[`jugadores/${id}/discord`]=document.querySelector(`[data-jd="${id}"]`).value.trim(); });
       await ref('').update(up); toast('Jugadores guardados'); }
+    if (a==='nueva-liga'){
+      const g = k => $('#nl-'+k).value.trim();
+      if (!g('nombre')) return alert('Poné el nombre de la liga.');
+      let id = g('nombre').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'').slice(0,20) || 'liga';
+      while (DATA.ligas?.[id]) id += '2';
+      await ref('ligas/'+id).set({nombre:g('nombre'), nombreLargo:g('largo'), division:g('div'), formato:g('formato'), color:g('color')||'#C9CED6',
+        orden:+g('orden')||9, discord:g('discord'), discordVence:'', firmaUrl:g('firma'), firmaMin:+g('firmamin')||0, cupo:+g('cupo')||20,
+        antiDfMax:+g('antidf')||0, antiDfUsados:0, dfMax:+g('dfmax')||0, dfContra:0, mercado:'', reglamento:g('reg'), servidor:'',
+        logo:g('logo')||('assets/'+id+'.png')});
+      toast('Liga creada'); render();
+    }
     if (a==='guardar-tabla'){ const v=document.querySelector(`[data-tabla="${t.dataset.id}"]`).value.trim(); await ref('tablas/'+t.dataset.id).set(v||null); toast('Tabla guardada'); }
   } catch(err){ if(a==='login'||a==='login-google'){ const el=$('#lg-err'); if(el) el.textContent='No se pudo entrar: revisá el email y la contraseña.'; } else fail(err); }
 });
