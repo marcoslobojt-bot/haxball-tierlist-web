@@ -167,7 +167,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--silver)}
 .adm-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--liga);border-radius:8px}
 .grid-pl{display:grid;grid-template-columns:1.3fr 1fr .8fr 1.2fr;gap:6px 10px;align-items:center}
 .grid-pl .h{color:var(--muted);font-weight:600;font-size:.9rem}
-.chk-row{display:grid;grid-template-columns:1fr 50px 70px 70px;gap:6px;align-items:center}
+.chk-row{display:grid;grid-template-columns:1fr 50px 50px 70px 70px;gap:6px;align-items:center}
 .chk-row input[type=number]{padding:5px 8px}
 .tabla td.l,.tabla th.l{text-align:left}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--silver);color:#000;padding:10px 18px;border-radius:8px;font-weight:600;z-index:50}
@@ -319,14 +319,14 @@ const SEED = {
       discord:'https://discord.gg/tVPrhBJqc', discordVence:'',
       firmaUrl:'https://discord.com/channels/1530703114703998986/1547185820694487060',
       firmaMin:30, antiDfMax:3, antiDfUsados:0, dfMax:0, dfContra:0, cupo:20, mercado:'', reglamento:'afa', servidor:'afahax',
-      plantel:{mark:{estado:'inscripto',rol:'DT'},durr:{estado:'inscripto',rol:'C'},rr:{estado:'inscripto'},cumbia:{estado:'pendiente'},lanus:{estado:'inscripto'},paredes:{estado:'inscripto'},gerr:{estado:'inscripto'},zurdo:{estado:'inscripto'},jugarapido:{estado:'inscripto'},xlr8:{estado:'inscripto'},mel:{estado:'inscripto'},roma:{estado:'inscripto'},soul:{estado:'inscripto'},saul:{estado:'inscripto'},mitoma:{estado:'pendiente'},mochi:{estado:'inscripto'},biccan:{estado:'pendiente'},dick:{estado:'inscripto'},santi:{estado:'inscripto'},xene:{estado:'inscripto'},almafuerte:{estado:'pendiente'}}
+      plantel:{mark:{estado:'inscripto',rol:'DT'},durr:{estado:'inscripto',rol:'C'},rr:{estado:'inscripto'},cumbia:{estado:'inscripto'},lanus:{estado:'inscripto'},paredes:{estado:'inscripto'},gerr:{estado:'inscripto'},zurdo:{estado:'inscripto'},jugarapido:{estado:'inscripto'},xlr8:{estado:'inscripto'},mel:{estado:'inscripto'},roma:{estado:'inscripto'},soul:{estado:'inscripto'},saul:{estado:'inscripto'},mitoma:{estado:'inscripto'},mochi:{estado:'inscripto'},biccan:{estado:'inscripto'},dick:{estado:'inscripto'},santi:{estado:'inscripto'},xene:{estado:'inscripto'}}
     },
     lneh: {
       orden:3, nombre:'LNEH', nombreLargo:'LNEH New Elite Haxball', division:'2da división', formato:'x5', color:'#E0313F', logo:'assets/lneh.png',
       discord:'https://discord.gg/aZvEJsqC', discordVence:'2026-09-26',
       firmaUrl:'https://discord.com/channels/1501001299699826688/1548887637153161226',
       firmaMin:30, antiDfMax:3, antiDfUsados:0, dfMax:0, dfContra:0, cupo:20, mercado:'', reglamento:'afa', servidor:'lneh',
-      plantel:{mark:{estado:'inscripto',rol:'DT'},durr:{estado:'inscripto',rol:'C'},rr:{estado:'inscripto'},cumbia:{estado:'pendiente'},lanus:{estado:'inscripto'},paredes:{estado:'inscripto'},gerr:{estado:'inscripto'},zurdo:{estado:'inscripto'},jugarapido:{estado:'inscripto'},xlr8:{estado:'inscripto'},mel:{estado:'inscripto'},roma:{estado:'inscripto'},soul:{estado:'inscripto'},saul:{estado:'inscripto'},mitoma:{estado:'pendiente'},mochi:{estado:'inscripto'},biccan:{estado:'inscripto'},dick:{estado:'inscripto'},santi:{estado:'inscripto'},xene:{estado:'inscripto'},almafuerte:{estado:'pendiente'}}
+      plantel:{mark:{estado:'inscripto',rol:'DT'},durr:{estado:'inscripto',rol:'C'},rr:{estado:'inscripto'},cumbia:{estado:'inscripto'},lanus:{estado:'inscripto'},paredes:{estado:'inscripto'},gerr:{estado:'inscripto'},zurdo:{estado:'inscripto'},jugarapido:{estado:'inscripto'},xlr8:{estado:'inscripto'},mel:{estado:'inscripto'},roma:{estado:'inscripto'},soul:{estado:'inscripto'},saul:{estado:'inscripto'},mitoma:{estado:'inscripto'},mochi:{estado:'inscripto'},biccan:{estado:'inscripto'},dick:{estado:'inscripto'},santi:{estado:'inscripto'},xene:{estado:'inscripto'}}
     },
     rhl: {
       orden:1, nombre:'Renacimiento', nombreLargo:'Liga Renacimiento', division:'1ra división', formato:'x5', color:'#74B3E8', logo:'assets/rhl.png',
@@ -432,6 +432,7 @@ function cardPartido(p, full=true){
     const t = statsTxt(p);
     if (full && (t.g||t.a)) extra += `<div class="extra">${t.g?`Goles: ${esc(t.g)}`:''}${t.g&&t.a?'<br>':''}${t.a?`Asistencias: ${esc(t.a)}`:''}</div>`;
     if (full && p.nota) extra += `<div class="extra muted">${esc(p.nota)}</div>`;
+    if (full) extra += checklist(p);
     if (full && p.replay) extra += `<div class="btns"><button class="btn sm ghost" data-replay="${esc(p.id)}">Descargar repetición</button><a class="muted" style="align-self:center" href="https://www.haxball.com/replay" target="_blank" rel="noopener">Se mira en haxball.com/replay</a></div>`;
   } else {
     const c = cierreFirma(p);
@@ -454,9 +455,10 @@ function checklist(p){
   const l = liga(p.liga); if (!l) return '';
   const ins = plantel(l).filter(j=>j.estado==='inscripto');
   if (!ins.length) return '';
-  const ss = p.ss||{}, ns = ins.filter(j=>ss[j.id]).length;
-  const filas = ins.map(j=>`<div>${esc(j.nombre)}: <span class="${ss[j.id]?'si':'no'}">${ss[j.id]?'SS ok':'sin SS'}</span></div>`).join('');
-  return `<details><summary>Mandaron SS ${ns} de ${ins.length}</summary><div class="checks">${filas}</div></details>`;
+  const fi = p.firmas||{}, ss = p.ss||{};
+  const nf = ins.filter(j=>fi[j.id]).length, ns = ins.filter(j=>ss[j.id]).length;
+  const filas = ins.map(j=>`<div>${esc(j.nombre)}: <span class="${fi[j.id]?'si':'no'}">${fi[j.id]?'firmó':'sin firma'}</span>, <span class="${ss[j.id]?'si':'no'}">${ss[j.id]?'SS ok':'sin SS'}</span></div>`).join('');
+  return `<details><summary>Firmaron ${nf} y mandaron SS ${ns} de ${ins.length}</summary><div class="checks">${filas}</div></details>`;
 }
 
 function statsTxt(p){
@@ -484,7 +486,7 @@ function avisos(){
     const pl = plantel(l);
     const pend = pl.filter(j=>j.estado==='pendiente');
     const ins = pl.filter(j=>j.estado==='inscripto');
-    if (pend.length) out.push(`<div class="aviso"><b>${esc(l.nombre)}:</b> faltan firmar ${esc(pend.map(j=>j.nombre).join(', '))}.${l.mercado?' '+esc(l.mercado):''}</div>`);
+    if (pend.length) out.push(`<div class="aviso"><b>${esc(l.nombre)}:</b> faltan anotarse ${esc(pend.map(j=>j.nombre).join(', '))}.${l.mercado?' '+esc(l.mercado):''}</div>`);
     else if (l.mercado) out.push(`<div class="aviso"><b>${esc(l.nombre)}:</b> ${esc(l.mercado)}</div>`);
     if (l.cupo && ins.length+pend.length > l.cupo) out.push(`<div class="aviso"><b>${esc(l.nombre)}:</b> hay ${ins.length+pend.length} jugadores para ${l.cupo} lugares. Uno o más van a quedar afuera.</div>`);
     if (l.dfMax && l.dfContra >= 2) out.push(`<div class="aviso"><b>${esc(l.nombre)}:</b> llevamos ${l.dfContra} de ${l.dfMax} DF en contra. Con ${l.dfMax} nos expulsan.</div>`);
@@ -587,7 +589,7 @@ function pageLiga(id){
   const ins = pl.filter(j=>j.estado==='inscripto'), pend = pl.filter(j=>j.estado==='pendiente');
   const rolOrden = {DT:0,C:1,SC:2};
   ins.sort((a,b)=>(rolOrden[a.rol]??9)-(rolOrden[b.rol]??9) || a.nombre.localeCompare(b.nombre));
-  const jHtml = (j,cls='') => `<div class="jug ${cls}"><div><b>${esc(j.nombre)}</b><small>${esc(j.discord)}</small></div>${j.rol?`<span class="tag">${esc(j.rol==='C'?'Capitán':j.rol==='SC'?'Subcapitán':j.rol)}</span>`:''}${cls?'<span class="tag warn">Falta firmar</span>':''}</div>`;
+  const jHtml = (j,cls='') => `<div class="jug ${cls}"><div><b>${esc(j.nombre)}</b><small>${esc(j.discord)}</small></div>${j.rol?`<span class="tag">${esc(j.rol==='C'?'Capitán':j.rol==='SC'?'Subcapitán':j.rol)}</span>`:''}${cls?'<span class="tag warn">Falta anotarse</span>':''}</div>`;
   const reg = (DATA.reglamentos||{})[l.reglamento];
   const serv = (DATA.servidor||{})[l.servidor];
   const ps = partidosArr().filter(p=>p.liga===id);
@@ -595,7 +597,7 @@ function pageLiga(id){
   const total = ins.length + pend.length;
   const datos = [
     `<div class="dato"><div class="muted">Firma</div><div class="v">${esc(l.firmaMin>=60? (l.firmaMin/60)+' h':l.firmaMin+' min')}</div><div class="muted">antes del partido</div></div>`,
-    `<div class="dato"><div class="muted">Plantel</div><div class="v ${l.cupo&&total>l.cupo?'warn':''}">${ins.length}${l.cupo?' / '+l.cupo:''}</div><div class="muted">${pend.length?(pend.length===1?'falta firmar 1':'faltan firmar '+pend.length):'firmados'}</div></div>`,
+    `<div class="dato"><div class="muted">Plantel</div><div class="v ${l.cupo&&total>l.cupo?'warn':''}">${ins.length}${l.cupo?' / '+l.cupo:''}</div><div class="muted">${pend.length?(pend.length===1?'falta anotarse 1':'faltan anotarse '+pend.length):'anotados'}</div></div>`,
     `<div class="dato"><div class="muted">Anti-DF usados</div><div class="v">${esc(l.antiDfUsados||0)} / ${esc(l.antiDfMax||0)}</div><div class="muted">en el torneo</div></div>`,
     l.dfMax ? `<div class="dato"><div class="muted">DF en contra</div><div class="v ${l.dfContra>=2?'bad':''}">${esc(l.dfContra||0)} / ${esc(l.dfMax)}</div><div class="muted">con ${esc(l.dfMax)} nos expulsan</div></div>` : ''
   ].join('');
@@ -719,7 +721,7 @@ function admPartidos(){
       <label class="full">Repetición (.hbr2, hasta 8 MB)<input name="replayFile" type="file" accept=".hbr2,.hbr"></label>
       ${p.replay?`<label class="full" style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="replayDel"> Quitar la repetición actual (${esc(p.replay.name)})</label>`:''}
       <label class="full">Nota<input name="nota" value="${esc(p.nota)}"></label>
-      <div class="full"><h3 style="margin:6px 0 4px">SS, goles y asistencias</h3><p class="muted" style="margin:0 0 10px">Cargá solo los goles y asistencias que la liga cuenta. En un DF dejalos en cero.</p><div id="f-checks">${admChecks(p)}</div></div>
+      <div class="full"><h3 style="margin:6px 0 4px">Firmas, SS, goles y asistencias</h3><p class="muted" style="margin:0 0 10px">Cargá solo los goles y asistencias que la liga cuenta. En un DF dejalos en cero.</p><div id="f-checks">${admChecks(p)}</div></div>
       <div class="full btns" style="margin:0"><button class="btn" data-act="guardar-partido">Guardar partido</button><button class="btn ghost" data-act="cancelar">Cancelar</button>
       ${ADM.edit!=='nuevo'?'<button class="btn danger" data-act="borrar-partido">Borrar partido</button>':''}</div>
     </div>`;
@@ -732,8 +734,10 @@ function admChecks(p){
   const l = liga(p.liga); if (!l) return '';
   const ins = plantel(l).filter(j=>j.estado==='inscripto');
   const ss = p.ss||{}, st = p.stats||{};
-  return `<div class="chk-row muted"><span>Jugador</span><span>SS</span><span>Goles</span><span>Asist.</span></div>` +
+  const fi = p.firmas||{};
+  return `<div class="chk-row muted"><span>Jugador</span><span>Firmó</span><span>SS</span><span>Goles</span><span>Asist.</span></div>` +
     ins.map(j=>`<div class="chk-row"><span>${esc(j.nombre)}</span>
+      <input type="checkbox" data-f="${esc(j.id)}" ${fi[j.id]?'checked':''} aria-label="${esc(j.nombre)} firmó">
       <input type="checkbox" data-s="${esc(j.id)}" ${ss[j.id]?'checked':''} aria-label="${esc(j.nombre)} mandó SS">
       <input type="number" min="0" data-g="${esc(j.id)}" value="${st[j.id]?.g||''}" aria-label="Goles de ${esc(j.nombre)}">
       <input type="number" min="0" data-a="${esc(j.id)}" value="${st[j.id]?.a||''}" aria-label="Asistencias de ${esc(j.nombre)}"></div>`).join('');
@@ -763,7 +767,7 @@ function admPlanteles(){
   const pl = l.plantel||{};
   const rows = Object.entries(DATA.jugadores||{}).sort((a,b)=>a[1].nombre.localeCompare(b[1].nombre)).map(([id,j])=>{ const x=pl[id]||{};
     return `<span>${esc(j.nombre)} <small class="muted">${esc(j.discord)}</small></span>
-      <select data-est="${esc(id)}" aria-label="Estado de ${esc(j.nombre)}">${opt('','No está',x.estado)}${opt('inscripto','Firmado',x.estado)}${opt('pendiente','Falta firmar',x.estado)}</select>
+      <select data-est="${esc(id)}" aria-label="Estado de ${esc(j.nombre)}">${opt('','No está',x.estado)}${opt('inscripto','Anotado',x.estado)}${opt('pendiente','Falta anotarse',x.estado)}</select>
       <select data-rol="${esc(id)}" aria-label="Rol de ${esc(j.nombre)}">${opt('','—',x.rol)}${opt('DT','DT',x.rol)}${opt('C','Capitán',x.rol)}${opt('SC','Subcapitán',x.rol)}</select>
       <input data-nick="${esc(id)}" value="${esc(x.nick)}" placeholder="Nick en esta liga" aria-label="Nick de ${esc(j.nombre)} en esta liga">`; }).join('');
   return `<div class="btns" style="margin:0 0 14px">${tabs}</div>
@@ -802,8 +806,9 @@ async function guardarPartido(){
   const id = ADM.edit==='nuevo' ? ref('partidos').push().key : ADM.edit;
   const prev = (DATA.partidos||{})[id] || {};
   const o = {liga:v('liga'), jornada:v('jornada')?+v('jornada'):'', fecha:v('fecha'), hora:v('hora'), sala:v('sala'), rival:v('rival'), condicion:v('condicion'),
-    ssUrl:v('ssUrl'), gp:v('gp')===''?null:+v('gp'), gr:v('gr')===''?null:+v('gr'), tipo:v('tipo'), rec:v('rec'), nota:v('nota'), ss:{}, stats:{}};
+    ssUrl:v('ssUrl'), gp:v('gp')===''?null:+v('gp'), gr:v('gr')===''?null:+v('gr'), tipo:v('tipo'), rec:v('rec'), nota:v('nota'), firmas:{}, ss:{}, stats:{}};
   if (o.gp!==null && o.gr===null) o.gr = 0;
+  f.querySelectorAll('[data-f]').forEach(c=>{ if(c.checked) o.firmas[c.dataset.f]=true; });
   f.querySelectorAll('[data-s]').forEach(c=>{ if(c.checked) o.ss[c.dataset.s]=true; });
   f.querySelectorAll('[data-g]').forEach(i=>{ const j=i.dataset.g, g=+i.value||0, a=+f.querySelector(`[data-a="${j}"]`).value||0; if(g||a) o.stats[j]={g,a}; });
   const file = f.querySelector('[name=replayFile]').files[0];
