@@ -339,7 +339,7 @@ async function exportVideo(from, to, name){
   const job = exporting = { cancel:false };
   const wasPlaying = playing; if (playing) togglePlay();
   $('modal').hidden=false; $('mTitle').textContent = total>FPS*60 ? 'Generando el video del partido' : 'Generando el clip';
-  $('mTxt').textContent='Preparando…'; $('mBar').style.width='0'; $('mEta').textContent='';
+  $('mTxt').textContent='Preparando…'; $('mBar').style.width='0'; $('mEta').textContent='Dejá esta pestaña abierta y visible mientras se genera.';
 
   // lienzos y renderer propios
   const gameCv=document.createElement('canvas'); gameCv.width=W; gameCv.height=H;
@@ -349,7 +349,12 @@ async function exportVideo(from, to, name){
   const rend = new R(API, { canvas: gameCv, images:{grass:imgs[0],concrete:imgs[1],concrete2:imgs[2],typing:imgs[3]}, paintGame:true });
   rend.followMode = renderer.followMode; rend.zoomCoeff = 1;
   if (!rend.followMode){ rend.restrictCameraOrigin=false; }
-  const r2 = API.Replay.read(bytes, {}); r2.setSpeed(0);
+  // planificador inmediato: el lector avanza lo más rápido que da la compu, sin esperar a los 60 Hz de la pantalla
+  const mc = new MessageChannel(), cola = []; let cid = 0;
+  mc.port1.onmessage = ()=>{ const q = cola.splice(0); q.forEach(([id,cb])=>{ if(id) cb(performance.now()); }); };
+  const fastRAF = cb=>{ const id=++cid; cola.push([id,cb]); mc.port2.postMessage(0); return id; };
+  const fastCAF = id=>{ const i=cola.findIndex(x=>x[0]===id); if(i>=0) cola[i][0]=0; };
+  const r2 = API.Replay.read(bytes, {}, { requestAnimationFrame: fastRAF, cancelAnimationFrame: fastCAF }); r2.setSpeed(0);
   rend.room = r2; rend.initialize(r2);
 
   // reloj falso para que la cámara se mueva igual que en el juego
@@ -362,7 +367,7 @@ async function exportVideo(from, to, name){
   const enc = new VideoEncoder({ output:(chunk,meta)=>muxer.addVideoChunk(chunk,meta), error:e=>{ encErr=e; } });
   enc.configure(cfg);
 
-  const t0 = realNow(); let n=0, first=true;
+  const t0 = realNow(); let n=0, step=0, first=true;
   const finish = async (ok)=>{
     restoreNow();
     try{ r2.destroy(); }catch(e){}
@@ -381,24 +386,26 @@ async function exportVideo(from, to, name){
     r2.onDestinationTimeReached = async ()=>{
       if (job.cancel || encErr){ await finish(false); if(encErr) alert('Error al codificar el video: '+encErr.message); return resolve(); }
       const g = r2.gameState;
-      if (g){
+      if (g && !g.pauseGameTickCounter){
         if (first && rend.followMode){ const b=g.physicsState.discs[0].pos; rend.setOrigin({x:b.x,y:b.y}); }
         if (first && !rend.followMode){ const st=g.stadium; rend.zoomCoeff=Math.min(W/(2*st.width),H/(2*st.height))*0.98/(window.devicePixelRatio||1); rend.setOrigin({x:0,y:0}); }
         first=false;
         fake += 1000/FPS; rend.render();
         octx.drawImage(gameCv,0,0); drawScore(octx,W,g);
-      } else { octx.fillStyle='#000'; octx.fillRect(0,0,W,H); }
-      const frame = new VideoFrame(outCv,{timestamp: Math.round(n*1e6/FPS), duration: Math.round(1e6/FPS)});
-      enc.encode(frame,{keyFrame: n%(FPS*2)===0}); frame.close(); n++;
-      while (enc.encodeQueueSize>8) await new Promise(r=>setTimeout(r,5));
-      if (n%15===0){
-        const p=n/total, el=(realNow()-t0)/1000, eta=p>0.02? el/p-el : null;
+        const frame = new VideoFrame(outCv,{timestamp: Math.round(n*1e6/FPS), duration: Math.round(1e6/FPS)});
+        enc.encode(frame,{keyFrame: n%(FPS*2)===0}); frame.close(); n++;
+        while (enc.encodeQueueSize>8) await new Promise(r=>setTimeout(r,2));
+      }
+      step++;
+      if (step%30===0){
+        const p=Math.min(1,(t-from)/(to-from)), el=(realNow()-t0)/1000, eta=p>0.02? el/p-el : null;
         $('mBar').style.width=(p*100).toFixed(1)+'%';
-        $('mTxt').textContent=`Cuadro ${n} de ${total}`;
+        $('mTxt').textContent=`Video: ${mmss(n*1000/FPS)} generados`;
         $('mEta').textContent = eta!=null ? `Falta aproximadamente ${eta>90? Math.round(eta/60)+' min' : Math.round(eta)+' s'}` : '';
+        await new Promise(r=>setTimeout(r,0)); // deja respirar a la página para que se vea el progreso
       }
       t += 1000/FPS;
-      if (n>=total){ await finish(true); return resolve(); }
+      if (t>to){ if(!n){ await finish(false); alert('En ese tramo no hay juego para grabar.'); return resolve(); } await finish(true); return resolve(); }
       r2.setTime(t);
     };
     r2.setTime(t);
