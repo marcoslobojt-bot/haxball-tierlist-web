@@ -438,6 +438,7 @@ function cardPartido(p, full=true){
     if (full && (t.g||t.a)) extra += `<div class="extra">${t.g?`Goles: ${esc(t.g)}`:''}${t.g&&t.a?'<br>':''}${t.a?`Asistencias: ${esc(t.a)}`:''}</div>`;
     if (full && p.nota) extra += `<div class="extra muted">${esc(p.nota)}</div>`;
     if (full) extra += checklist(p);
+    if (full && p.informe) extra += `<div class="btns"><button class="btn sm" data-informe="${esc(p.id)}">Ver informe del partido</button><button class="btn sm ghost" data-informe-dl="${esc(p.id)}">Descargar PDF</button></div>`;
     if (full && p.replay) extra += `<div class="btns"><button class="btn sm ghost" data-replay="${esc(p.id)}">Descargar repetición</button><a class="muted" style="align-self:center" href="https://www.haxball.com/replay" target="_blank" rel="noopener">Se mira en haxball.com/replay</a></div>`;
   } else {
     const c = cierreFirma(p);
@@ -727,6 +728,8 @@ function admPartidos(){
       <label>Rec<select name="rec">${opt('','—',p.rec)}${opt('pendiente','Pendiente',p.rec)}${opt('enviada','Enviada',p.rec)}</select></label>
       <label class="full">Repetición (.hbr2, hasta 8 MB)<input name="replayFile" type="file" accept=".hbr2,.hbr"></label>
       ${p.replay?`<label class="full" style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="replayDel"> Quitar la repetición actual (${esc(p.replay.name)})</label>`:''}
+      <label class="full">Informe del partido (PDF, hasta 6 MB)<input name="informeFile" type="file" accept="application/pdf,.pdf"></label>
+      ${p.informe?`<label class="full" style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="informeDel"> Quitar el informe actual (${esc(p.informe.name)})</label>`:''}
       <label class="full">Nota<input name="nota" value="${esc(p.nota)}"></label>
       <div class="full"><h3 style="margin:6px 0 4px">Firmas, SS, goles y asistencias</h3><p class="muted" style="margin:0 0 10px">Cargá solo los goles y asistencias que la liga cuenta. En un DF dejalos en cero.</p><div id="f-checks">${admChecks(p)}</div></div>
       <div class="full btns" style="margin:0"><button class="btn" data-act="guardar-partido">Guardar partido</button><button class="btn ghost" data-act="cancelar">Cancelar</button>
@@ -862,6 +865,16 @@ async function guardarPartido(){
       o.replay = {name:file.name, size:file.size};
     } else if (quitar){ await db.ref('replays/'+id).remove(); }
     else if (prev.replay) o.replay = prev.replay;
+    const inf = f.querySelector('[name=informeFile]').files[0];
+    const quitarInf = f.querySelector('[name=informeDel]')?.checked;
+    if (inf){
+      if (inf.type && inf.type !== 'application/pdf') return alert('El informe tiene que ser un PDF.');
+      if (inf.size > 6e6) return alert('El informe pesa más de 6 MB.');
+      toast('Subiendo informe…');
+      await db.ref('informes/'+id).set({name:inf.name, data:await fileB64(inf)});
+      o.informe = {name:inf.name, size:inf.size, subido:Date.now()};
+    } else if (quitarInf){ await db.ref('informes/'+id).remove(); }
+    else if (prev.informe) o.informe = prev.informe;
     await ref('partidos/'+id).set(o);
     ADM.edit=null; toast('Partido guardado'); render();
   } catch(e){ fail(e); }
@@ -878,6 +891,26 @@ async function bajarReplay(id){
   setTimeout(()=>URL.revokeObjectURL(url),5000);
 }
 
+async function blobInforme(id){
+  if (!db) throw new Error('Los informes se ven desde el sitio publicado.');
+  const v = (await db.ref('informes/'+id).get()).val();
+  if (!v) throw new Error('No se encontró el informe de este partido.');
+  const bin = atob(v.data), u8 = new Uint8Array(bin.length);
+  for (let i=0;i<bin.length;i++) u8[i] = bin.charCodeAt(i);
+  return {url:URL.createObjectURL(new Blob([u8],{type:'application/pdf'})), name:v.name||'informe.pdf'};
+}
+function bajarBlob(url,name){ const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); }
+async function verInforme(id){
+  const w = window.open('', '_blank');           // se abre en el click para que no lo bloquee el navegador
+  if (w) w.document.write('<p style="font-family:sans-serif;padding:20px">Cargando informe…</p>');
+  try {
+    const {url,name} = await blobInforme(id);
+    if (w) w.location.href = url; else bajarBlob(url,name);
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  } catch(err){ if (w) w.close(); throw err; }
+}
+async function bajarInforme(id){ const {url,name} = await blobInforme(id); bajarBlob(url,name); setTimeout(()=>URL.revokeObjectURL(url),5000); }
+
 document.addEventListener('change', e=>{
   if (e.target.matches('#f-partido [name=liga]')){ ADM.liga = e.target.value; $('#f-checks').innerHTML = admChecks({liga:e.target.value}); }
 });
@@ -887,6 +920,8 @@ document.addEventListener('click', async e=>{
   if (t.dataset.cal){ CAL.m += +t.dataset.cal; if(CAL.m<0){CAL.m=11;CAL.y--;} if(CAL.m>11){CAL.m=0;CAL.y++;} CAL_SEL=null; return render(); }
   if (t.dataset.sel){ CAL_SEL = t.dataset.sel; document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('sel',c===t));
     $('#cal-sel').innerHTML = cardPartido({id:CAL_SEL,...DATA.partidos[CAL_SEL]}); tick(); return; }
+  if (t.dataset.informe){ t.disabled=true; try{ await verInforme(t.dataset.informe); } catch(err){ alert('No se pudo abrir el informe: '+err.message); } t.disabled=false; return; }
+  if (t.dataset.informeDl){ t.disabled=true; try{ await bajarInforme(t.dataset.informeDl); } catch(err){ alert('No se pudo descargar: '+err.message); } t.disabled=false; return; }
   if (t.dataset.replay){ t.disabled=true; try{ await bajarReplay(t.dataset.replay); } catch(err){ alert('No se pudo descargar: '+err.message); } t.disabled=false; return; }
   if (t.dataset.tab){ ADM.tab=t.dataset.tab; ADM.edit=null; return render(); }
   if (t.dataset.editp){ ADM.edit=t.dataset.editp; return render(); }
@@ -903,7 +938,7 @@ document.addEventListener('click', async e=>{
     if (a==='nuevo-partido'){ ADM.edit='nuevo'; render(); }
     if (a==='cancelar'){ ADM.edit=null; render(); }
     if (a==='guardar-partido') await guardarPartido();
-    if (a==='borrar-partido'){ if(confirm('¿Borrar este partido?')){ await ref('partidos/'+ADM.edit).remove(); ADM.edit=null; toast('Partido borrado'); render(); } }
+    if (a==='borrar-partido'){ if(confirm('¿Borrar este partido?')){ await db.ref('informes/'+ADM.edit).remove(); await db.ref('replays/'+ADM.edit).remove(); await ref('partidos/'+ADM.edit).remove(); ADM.edit=null; toast('Partido borrado'); render(); } }
     if (a==='guardar-liga'){ const f=t.closest('[data-liga]'), up={};
       f.querySelectorAll('[name]').forEach(i=>{ up[i.name] = i.type==='number' ? (+i.value||0) : i.value.trim(); });
       await ref('ligas/'+t.dataset.id).update(up); toast('Liga guardada'); }
