@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prime Hax</title>
+<link rel="icon" href="assets/prime.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#000;
+  --panel:#15181C;
+  --panel2:#1D2127;
+  --line:#2B3038;
+  --silver:#C9CED6;
+  --text:#ECEEF1;
+  --muted:#8C949E;
+  --win:#8FD9AE;
+  --loss:#F28B82;
+  --warn:#F2C46B;
+  --display:'Big Shoulders Display',Impact,'Arial Narrow',sans-serif;
+  --body:'Barlow Semi Condensed','Arial Narrow',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:80px}
+body{margin:0;background:var(--bg);color:var(--text);font:400 17px/1.5 var(--body)}
+a{color:inherit}
+img{max-width:100%}
+h1,h2,h3{font-family:var(--display);font-weight:800;line-height:1;margin:0;letter-spacing:.01em}
+h2{font-size:2rem;margin:0 0 .9rem}
+h3{font-size:1.35rem}
+p{margin:.4rem 0}
+:focus-visible{outline:2px solid var(--silver);outline-offset:3px;border-radius:4px}
+.muted{color:var(--muted)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+
+/* barra superior */
+.top{position:sticky;top:0;z-index:10;background:rgba(0,0,0,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:20px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;flex:none}
+.brand img{width:38px;height:38px;object-fit:contain}
+.brand b{font-family:var(--display);font-size:1.6rem;font-weight:900}
+nav{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav a{text-decoration:none;padding:6px 12px;border-radius:999px;color:var(--muted);white-space:nowrap;font-weight:600}
+nav a:hover{color:var(--text)}
+nav a.on{background:var(--panel2);color:var(--text)}
+
+main{padding:28px 0 80px}
+section{margin-top:44px}
+
+/* botones */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:8px;border:1px solid var(--silver);background:var(--silver);color:#000;font:600 1rem var(--body);text-decoration:none;cursor:pointer}
+.btn:hover{background:#fff}
+.btn.ghost{background:transparent;color:var(--text);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--silver)}
+.btn.sm{padding:5px 11px;font-size:.92rem}
+.btn.danger{background:transparent;color:var(--loss);border-color:#5a2c2c}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+
+/* portada */
+.hero{position:relative;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:
+  radial-gradient(120% 90% at 0% 0%,#262B33 0%,transparent 55%),var(--panel)}
+.hero::before{content:"";position:absolute;inset:0 auto 0 0;width:6px;background:var(--liga,var(--silver))}
+.hero-in{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center;padding:32px 36px}
+.hero .crest{width:clamp(96px,16vw,168px)}
+.hero .ctx{color:var(--muted);font-weight:600}
+.hero .ctx img{width:22px;height:22px;vertical-align:-5px;margin-right:6px;border-radius:4px}
+.hero .versus{font-family:var(--display);font-weight:900;font-size:clamp(2.6rem,8.5vw,6rem);line-height:.92;margin:.35rem 0 .5rem;overflow-wrap:anywhere}
+.hero .versus span{display:block;font-size:.38em;color:var(--muted);font-weight:700}
+.hero .cuando{font-size:1.2rem;font-weight:600}
+.cd{display:inline-block;margin-top:10px;padding:6px 12px;border-radius:8px;background:#000;border:1px solid var(--line);font-weight:600}
+.cd.urg{border-color:var(--warn);color:var(--warn)}
+.hero .score{font-family:var(--display);font-weight:900;font-size:clamp(3rem,10vw,6.5rem);line-height:.9}
+
+.avisos{display:grid;gap:10px}
+.aviso{border:1px solid #4a3d22;background:#1b1710;color:#f3dfae;border-radius:10px;padding:12px 16px}
+.aviso b{color:#fff}
+
+.ligas{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.liga-card{display:block;text-decoration:none;background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--liga);border-radius:12px;padding:18px}
+.liga-card:hover{border-color:var(--silver);border-top-color:var(--liga)}
+.liga-card .head{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.liga-card .head img,.liga-card .head .sinlogo{width:48px;height:48px;border-radius:8px;object-fit:cover}
+.sinlogo{display:grid;place-items:center;background:var(--panel2);border:1px solid var(--liga,var(--line));color:var(--liga,var(--silver));font-family:var(--display);font-weight:900;font-size:1.6rem}
+.liga-top .sinlogo{width:104px;height:104px;border-radius:14px;font-size:3rem}
+.ctx .sinlogo{width:22px;height:22px;border-radius:4px;font-size:.9rem;display:inline-grid;vertical-align:-5px;margin-right:6px}
+.liga-card .row{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding:8px 0 0;margin-top:8px;font-size:.98rem}
+
+/* partidos */
+.lista{display:grid;gap:10px}
+.partido{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--liga);border-radius:10px;padding:12px 16px}
+.partido .meta{display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--muted);font-size:.95rem}
+.partido .meta b{color:var(--text);font-weight:600}
+.enf{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;margin:6px 0 2px}
+.enf .eq{font-family:var(--display);font-weight:800;font-size:1.45rem;line-height:1.05}
+.enf .eq:last-child{text-align:right}
+.enf .eq.nos{color:#fff}
+.enf .eq:not(.nos){color:var(--silver)}
+.marcador{font-family:var(--display);font-weight:900;font-size:1.9rem;padding:0 6px;white-space:nowrap}
+.r-g .marcador{color:var(--win)} .r-p .marcador{color:var(--loss)}
+.hora{font-family:var(--display);font-weight:800;font-size:1.4rem;color:var(--muted)}
+.tag{display:inline-block;white-space:nowrap;padding:1px 8px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);font-size:.85rem;font-weight:600;color:var(--text)}
+.tag.warn{border-color:#5d4a22;color:var(--warn)}
+.tag.ok{border-color:#264a35;color:var(--win)}
+.tag.bad{border-color:#5a2c2c;color:var(--loss)}
+.partido .extra{margin-top:8px;font-size:.98rem}
+.partido details{margin-top:8px}
+summary{cursor:pointer;color:var(--muted);font-weight:600}
+summary:hover{color:var(--text)}
+.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:4px 16px;margin-top:8px;font-size:.95rem}
+.checks .si{color:var(--win)} .checks .no{color:var(--muted)}
+
+/* calendario */
+.cal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.cal-head h2{margin:0;text-transform:none}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.cal .dow{padding:6px 8px;color:var(--muted);font-weight:600;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--panel)}
+.cal .dia{min-height:104px;padding:6px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.cal .dia.fuera{background:#07080a}
+.cal .dia.fuera .n{opacity:.35}
+.cal .dia.hoy .n{background:var(--silver);color:#000;border-radius:6px;padding:0 6px}
+.cal .n{font-weight:700;align-self:flex-start}
+.chip{all:unset;cursor:pointer;display:block;font-size:.85rem;line-height:1.25;padding:3px 6px;border-radius:5px;background:var(--panel2);border-left:3px solid var(--liga);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip:hover,.chip.sel{background:#2b313a}
+.chip:focus-visible{outline:2px solid var(--silver)}
+.leyenda{display:flex;flex-wrap:wrap;gap:16px;margin:14px 0;color:var(--muted)}
+.leyenda i{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--liga);margin-right:6px;vertical-align:-1px}
+
+/* liga */
+.liga-top{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center;padding-bottom:22px;border-bottom:1px solid var(--line)}
+.liga-top img{width:104px;height:104px;border-radius:14px;object-fit:cover;border:1px solid var(--line)}
+.liga-top h1{font-size:clamp(2.4rem,6vw,3.8rem)}
+.datos{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:22px}
+.dato{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.dato .v{font-family:var(--display);font-weight:800;font-size:1.8rem;line-height:1.1}
+.dato .v.warn{color:var(--warn)} .dato .v.bad{color:var(--loss)}
+.plantel{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.jug{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.jug.pend{border-style:dashed}
+.jug b{display:block;font-weight:700}
+.jug small{color:var(--muted)}
+.reglas{margin:0;padding-left:1.2em;max-width:72ch}
+.reglas li{margin:.35rem 0}
+.texto{white-space:pre-wrap;max-width:75ch;color:#d4d8de;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-top:10px}
+table.tabla{width:100%;border-collapse:collapse;font-size:.98rem}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.tabla th,.tabla td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--line)}
+.tabla th{color:var(--muted);font-weight:600;background:var(--panel)}
+.tabla td:nth-child(2),.tabla th:nth-child(2){text-align:left}
+.tabla tr.nos td{background:#1f242b;font-weight:700}
+
+/* guía SS */
+.pasos{counter-reset:p;list-style:none;padding:0;margin:0;display:grid;gap:12px;max-width:760px}
+.pasos li{counter-increment:p;display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:start}
+.pasos li::before{content:counter(p);font-family:var(--display);font-weight:900;font-size:1.6rem;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--panel2);border:1px solid var(--line)}
+
+/* admin */
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0}
+.tabs button{all:unset;cursor:pointer;padding:7px 14px;border-radius:8px;border:1px solid var(--line);font-weight:600;color:var(--muted)}
+.tabs button.on{background:var(--silver);color:#000;border-color:var(--silver)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+.form .full{grid-column:1/-1}
+label{display:grid;gap:4px;font-size:.92rem;color:var(--muted);font-weight:600}
+input,select,textarea{font:inherit;font-size:1rem;color:var(--text);background:#000;border:1px solid var(--line);border-radius:7px;padding:8px 10px;width:100%}
+textarea{min-height:120px;resize:vertical}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--silver)}
+.adm-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--liga);border-radius:8px}
+.grid-pl{display:grid;grid-template-columns:1.3fr 1fr .8fr 1.2fr;gap:6px 10px;align-items:center}
+.grid-pl .h{color:var(--muted);font-weight:600;font-size:.9rem}
+.chk-row{display:grid;grid-template-columns:1fr 50px 50px 70px 70px;gap:6px;align-items:center}
+.chk-row input[type=number]{padding:5px 8px}
+.tabla td.l,.tabla th.l{text-align:left}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--silver);color:#000;padding:10px 18px;border-radius:8px;font-weight:600;z-index:50}
+
+footer{border-top:1px solid var(--line);padding:24px 0;color:var(--muted);font-size:.92rem}
+
+@media (max-width:700px){
+  .brand b{display:none}
+  .top .wrap{gap:12px}
+  .cal-head h2{font-size:1.5rem;text-align:center}
+  .hero-in{grid-template-columns:1fr;padding:24px 22px}
+  .hero .crest{width:84px}
+  .cal .dia{min-height:62px;padding:4px}
+  .chip{font-size:0;padding:0;height:8px;border-left-width:0;background:var(--liga);border-radius:4px}
+  .cal .dow{padding:4px;font-size:.8rem}
+  .liga-top{grid-template-columns:1fr}
+  .liga-top img{width:80px;height:80px}
+  .grid-pl{grid-template-columns:1fr 1fr}
+  .grid-pl .h{display:none}
+  .enf .eq{font-size:1.2rem}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#/"><img src="assets/prime.png" alt=""><b>Prime Hax</b></a>
+    <nav id="nav"></nav>
+  </div>
+</header>
+<main class="wrap" id="app"><p class="muted">Cargando…</p></main>
+<footer><div class="wrap">Prime Hax, equipo de Haxball. Fixture y planteles actualizados por el cuerpo técnico.</div></footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* Config del proyecto Firebase haxball-tier */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCoYMARaxZGE2pEwsSgbJRgv7NGn0Gln0A",
+  authDomain: "haxball-tier.firebaseapp.com",
+  databaseURL: "https://haxball-tier-default-rtdb.firebaseio.com",
+  projectId: "haxball-tier",
+  storageBucket: "haxball-tier.firebasestorage.app",
+  messagingSenderId: "593797428721",
+  appId: "1:593797428721:web:b1c10c6f073f328939c050"
+};
+
+const US = 'Prime Hax';
+
+/* ---------- datos iniciales ---------- */
+const REG_AFA = `1. Firmas válidas
+Las firmas en el foro deberán realizarse mínimo 30 minutos antes del inicio del partido. Si un jugador firma fuera de tiempo, no estará habilitado para jugar y sus estadísticas no serán contabilizadas.
+
+2. SS obligatoria
+Todos los jugadores deben enviar SS del partido. La captura debe mostrar claramente: nick de Haxball, hora exacta y usuario de Discord. Sin SS válida, sus goles y asistencias no contarán.
+
+3. Grabaciones (rec)
+Todos los partidos deben ser grabados y enviados. La rec podrá entregarse hasta 2 días después de la fecha del encuentro. No enviarla a tiempo resultará en un empate 0 a 0, sin sumar puntos.
+
+4. Jugadores inhabilitados
+Si un equipo juega un segundo con un jugador inhabilitado será DF para el equipo rival.
+
+5. Uniformes
+Los equipos deberán usar camisetas oficiales con diferencias claras respecto al rival. Si hay confusión visual, el local deberá cambiar el color de su camiseta.
+
+6. Tiempo reglamentario
+Cada encuentro dura 14 minutos totales, divididos en dos tiempos de 7 minutos.
+
+7. Mapas habilitados
+Los partidos podrán disputarse en el mapa oficial de la liga o en Bazinga. El uso del mapa oficial no es obligatorio.
+
+8. Cantidad mínima de jugadores
+Para iniciar un partido, cada equipo deberá contar con un mínimo de 4 jugadores habilitados. Si un equipo tiene menos de 4, perderá por DF. Si ambos equipos tienen menos de 4 jugadores, el encuentro será reprogramado.
+
+9. Uso del Anti-DF
+Cada club contará con 3 Anti-DF por torneo. Solo podrán utilizarse hasta 1 hora antes del partido.
+
+10. Límite de equipos por jugador
+Cada jugador podrá formar parte de 1 equipo por división (por ejemplo, 1 en primera y 1 en segunda), nunca dos en la misma división.
+
+11. Solicitud de DF
+Para reclamar un DF deberán presentarse pruebas de que el host fue enviado correctamente, que el rival no se presentó y que pasaron al menos 15 minutos desde el envío del host. Antes del minuto 3:30 del segundo tiempo, si uno de los dos equipos queda con menos de 4 jugadores, se puede reclamar DF con pruebas válidas (por ejemplo, la rec).
+
+12. Uso de admin
+Solo DT, capitán y subcapitán podrán recibir admin en la sala. Si un jugador sin autorización obtiene admin y comete una infracción, tanto él como el club recibirán doble sanción.
+
+13. Sistema de pausas
+Las pausas deberán pedirse escribiendo "P" en una zona segura del campo. Se recomienda avisar varias veces antes de pausar. El tiempo máximo de pausa es de 1 minuto; superado ese límite, el partido deberá continuar.
+
+14. Gol de oro
+El partido se deberá terminar al minuto 7:00 exacto. Si hubo una pausa en el segundo tiempo, se deberán jugar 40 segundos exactos de más, salvo que el partido vaya por diferencia de 3 o más.
+
+15. Plantillas oficiales
+Cada club podrá registrar hasta 20 jugadores y deberá mantener un mínimo de 9 activos.
+
+16. Cambio de horario
+Los admins pueden cambiar el horario, lo que modifica solamente la hora y no el día. Si hay que cambiar el día, se hablará con los capitanes o presidentes.
+
+17. Fixture oficial
+Las jornadas y fechas oficiales de cada torneo serán publicadas en el canal fixture correspondiente a cada competición o división.
+
+18. Marcador final
+El partido termina cuando se cumple el tiempo reglamentario, siguiendo las normas de la regla 13, o cuando haya diferencia de 7. Si un equipo hace los 7 goles primero, el partido termina y el resultado final es 7 a 0, sin importar la diferencia.`;
+
+const REG_RHL = `Sanciones
+Las sanciones serán analizadas por el staff según la circunstancia y la gravedad. Se puede sancionar por fechas o temporadas.
+
+1. Deben firmar 1 hora antes del oficial. Si firman con 50 minutos o menos, la sanción será más grave. Si se repite, o si cancelan y firman varias veces, la sanción será grave.
+2. No se puede hacer DU: sanción grave (varias fechas).
+3. Si no hacés SS, serán 2 o 3 fechas de sanción. Si se repite varias veces, será más grave.
+4. La toxicidad en oficiales o canales públicos es sanción grave.
+5. No desvirtuar en los canales, si no serás aislado (sin sanción de fechas).
+Las sanciones se reclaman por MD.
+
+DF
+1. El DF se cobra 15 minutos después de que se mandó el host al DT y al capitán del rival.
+2. Hay que tener 4 SS o más para cobrar DF; si no, será doble DF.
+3. Mandar captura sí o sí, indicando el partido y a favor de quién es el DF.
+4. Cada equipo tiene un máximo de 4 DF. Al llegar a 2 se avisa; al llegar al máximo, el equipo es expulsado de la liga.
+
+Anti-DF
+1. Se debe mandar hasta 2 horas antes de la hora acordada.
+2. Hay que taguear a un admin y al DT del otro equipo; si no, no cuenta.
+3. Cada equipo tiene un máximo de 3 Anti-DF.
+
+Fair play
+1. Si en un host hay un lag considerable, los goles convertidos en ese host no cuentan (lo analizan los admins).
+2. Si le va lag a uno o dos jugadores no es necesario cambiar de host, salvo que lo acuerden los dos DT.
+3. Si le va lag a un equipo, se repite el oficial en otro host.
+
+Jugadores habilitados
+Las reglas del mercado de fichajes se explican en un canal aparte del servidor.`;
+
+const SEED = {
+  jugadores: {
+    mark:{nombre:'Mark',discord:'Mark_04'}, rr:{nombre:'RR',discord:'ʀʀ'}, cumbia:{nombre:'Cumbia',discord:'Rey Cumbia'},
+    lanus:{nombre:'Lanus',discord:'lanuscapodelsur99'}, paredes:{nombre:'Paredes',discord:'Manu'}, gerr:{nombre:'Gerr',discord:'Gerrrrrr'},
+    zurdo:{nombre:'Zurdo',discord:'Zurdo'}, jugarapido:{nombre:'Jugarapido',discord:'zcmnt'}, xlr8:{nombre:'Xlr8',discord:'lauti(xlr8)'},
+    durr:{nombre:'Durr',discord:'durr.'}, mel:{nombre:'Mel',discord:'mimiii'}, roma:{nombre:'Roma',discord:'Roma'},
+    soul:{nombre:'Soul',discord:'Soul'}, saul:{nombre:'Saul',discord:'elfachalovi'}, mitoma:{nombre:'Mitoma',discord:'mitogoat'},
+    mochi:{nombre:'Mochi',discord:'mochi'}, biccan:{nombre:'Biccan',discord:'biccante'}, dick:{nombre:'Dick',discord:'fede p'},
+    santi:{nombre:'Santi',discord:'santi_adb'}, xene:{nombre:'Xene',discord:'Xeneize_120'}, almafuerte:{nombre:'Almafuerte',discord:'ALMAFUERTE !'}
+  },
+  ligas: {
+    afahax: {
+      orden:2, nombre:'AFAHAX', division:'2da división', formato:'', color:'#EDEDED', logo:'assets/afahax.png',
+      discord:'https://discord.gg/tVPrhBJqc', discordVence:'',
+      firmaUrl:'https://discord.com/channels/1530703114703998986/1547185820694487060',
+      firmaMin:30, antiDfMax:3, antiDfUsados:0, dfMax:0, dfContra:0, cupo:20, mercado:'', reglamento:'afa', servidor:'afahax',
+      plantel:{mark:{estado:'inscripto',rol:'DT'},durr:{estado:'inscripto',rol:'C'},rr:{estado:'inscripto'},cumbia:{estado:'inscripto'},lanus:{estado:'inscripto'},paredes:{estado:'inscripto'},gerr:{estado:'inscripto'},zurdo:{estado:'inscripto'},jugarapido:{estado:'inscripto'},xlr8:{estado:'inscripto'},mel:{estado:'inscripto'},roma:{estado:'inscripto'},soul:{estado:'inscripto'},saul:{estado:'inscripto'},mitoma:{estado:'inscripto'},mochi:{estado:'inscripto'},biccan:{estado:'inscripto'},dick:{estado:'inscripto'},santi:{estado:'inscripto'},xene:{estado:'inscripto'}}
+    },
+    lneh: {
+      orden:3, nombre:'LNEH', nombreLargo:'LNEH New Elite Haxball', division:'2da división', formato:'x5', color:'#E0313F', logo:'assets/lneh.png',
+      discord:'https://discord.gg/aZvEJsqC', discordVence:'2026-09-26',
+      firmaUrl:'https://discord.com/channels/1501001299699826688/1548887637153161226',
+      firmaMin:30, antiDfMax:3, antiDfUsados:0, dfMax:0, dfContra:0, cupo:20, mercado:'', reglamento:'afa', servidor:'lneh',
+      plantel:{mark:{estado:'inscripto',rol:'DT'},durr:{estado:'inscripto',rol:'C'},rr:{estado:'inscripto'},cumbia:{estado:'inscripto'},lanus:{estado:'inscripto'},paredes:{estado:'inscripto'},gerr:{estado:'inscripto'},zurdo:{estado:'inscripto'},jugarapido:{estado:'inscripto'},xlr8:{estado:'inscripto'},mel:{estado:'inscripto'},roma:{estado:'inscripto'},soul:{estado:'inscripto'},saul:{estado:'inscripto'},mitoma:{estado:'inscripto'},mochi:{estado:'inscripto'},biccan:{estado:'inscripto'},dick:{estado:'inscripto'},santi:{estado:'inscripto'},xene:{estado:'inscripto'}}
+    },
+    rhl: {
+      orden:1, nombre:'Renacimiento', nombreLargo:'Liga Renacimiento', division:'1ra división', formato:'x5', color:'#74B3E8', logo:'assets/rhl.png',
+      discord:'https://discord.gg/T578fyesR', discordVence:'2026-10-21',
+      firmaUrl:'https://discord.com/channels/1494748374006759505/1546280952148394185',
+      firmaMin:60, antiDfMax:3, antiDfUsados:0, dfMax:4, dfContra:0, cupo:20,
+      mercado:'El mercado de firmas está cerrado. Abre el 24/09.', reglamento:'rhl', servidor:'',
+      plantel:{mark:{estado:'inscripto',rol:'DT'},durr:{estado:'inscripto',nick:'migo'},lanus:{estado:'inscripto'},santi:{estado:'inscripto'},biccan:{estado:'inscripto'},gerr:{estado:'inscripto'},zurdo:{estado:'inscripto'},xene:{estado:'inscripto'},almafuerte:{estado:'inscripto'},jugarapido:{estado:'inscripto'},mochi:{estado:'inscripto'},xlr8:{estado:'inscripto'},rr:{estado:'inscripto'},cumbia:{estado:'inscripto',nick:'MATi7L'},dick:{estado:'inscripto'},mel:{estado:'inscripto'},paredes:{estado:'inscripto'},soul:{estado:'pendiente'},roma:{estado:'pendiente'},saul:{estado:'pendiente'},mitoma:{estado:'pendiente'}}
+    }
+  },
+  partidos: {
+    p001:{liga:'rhl',jornada:1,fecha:'2026-09-16',hora:'21:00',sala:'SS3',rival:'Zent B',condicion:'visitante',gp:2,gr:2,tipo:'',nota:'Faltan cargar goles y asistencias.',rec:''},
+    p002:{liga:'afahax',jornada:1,fecha:'2026-09-18',hora:'22:00',sala:'SS1',rival:'Selección Cuacki',condicion:'local',gp:1,gr:3,tipo:'DN',nota:'En cancha terminó 3–3. Roma no firmó a tiempo y se anularon los goles en los que intervino.',stats:{jugarapido:{g:1,a:0}},rec:''},
+    p003:{liga:'lneh',jornada:1,fecha:'2026-09-19',hora:'22:15',sala:'SS4',rival:'Selección Panda',condicion:'visitante',gp:3,gr:0,tipo:'DF a favor',nota:'El rival no se presentó. No cuenta para estadísticas.',rec:''}
+  },
+  tablas: {
+    rhl:`Atlético Ryodan;0;0;0;0;0;0;0
+Backyardigans FC;0;0;0;0;0;0;0
+Cerdoneta B;0;0;0;0;0;0;0
+Cósmicos Deluxe;0;0;0;0;0;0;0
+Mangeyko;0;0;0;0;0;0;0
+KS Kastriotti;0;0;0;0;0;0;0
+Kuarmy FC;0;0;0;0;0;0;0
+La Paz;0;0;0;0;0;0;0
+Semillero HC;0;0;0;0;0;0;0
+Prime Hax;0;0;0;0;0;0;0
+Selección Cuacki;0;0;0;0;0;0;0
+Zent B;0;0;0;0;0;0;0`
+  },
+  reglamentos: {
+    afa:{titulo:'Reglamento AFAHAX y LNEH',texto:REG_AFA,clave:[
+      'Firmá en el foro hasta 30 minutos antes del partido. Si firmás tarde no podés jugar y tus goles no cuentan.',
+      'Mandá SS en cada partido con tu nick de Haxball, la hora exacta y tu usuario de Discord. Sin SS válida no cuentan tus goles ni tus asistencias.',
+      'Hacen falta 4 jugadores habilitados para empezar. Con menos, es DF.',
+      'Jugar aunque sea un segundo con alguien inhabilitado es DF para el rival.',
+      'Solo DT, capitán y subcapitán pueden tener admin en la sala.',
+      'Se juegan dos tiempos de 7 minutos. Las pausas se piden con "P" y duran como mucho 1 minuto.',
+      'La rec se entrega hasta 2 días después. Sin rec, el partido queda 0 a 0 sin puntos.']},
+    rhl:{titulo:'Reglamento Liga Renacimiento',texto:REG_RHL,clave:[
+      'Firmá hasta 1 hora antes del oficial. Firmar con 50 minutos o menos tiene sanción más grave.',
+      'No mandar SS son 2 o 3 fechas de sanción.',
+      'Hacer DU es sanción grave de varias fechas.',
+      'El equipo tiene un máximo de 4 DF en contra: con 2 hay aviso y con 4 la liga nos expulsa.',
+      'Para cobrar un DF hacen falta 4 SS o más; si no, es doble DF.',
+      'El Anti-DF se manda hasta 2 horas antes, tagueando a un admin y al DT rival.']}
+  },
+  servidor: {
+    afahax:['Respetar a todos los miembros','No insultos ni acosos','No spam, flood ni publicidades','Se permiten bromas, no de mal gusto ni faltando el respeto','Usar cada canal para su tema','Prohibido faltar a un partido habiendo dicho que jugabas','Prohibido abandonar un partido','Respetar las decisiones del staff y los árbitros','No usar hacks, scripts ni aprovechar bugs','No provocar ni insultar a jugadores de otros clubes','No usar fotos ni nombres ofensivos','No gritar ni poner música fuerte en canales de voz','No molestar en canales de reuniones','Avisar con tiempo si no podés jugar','Contenido +18: ban permanente'],
+    lneh:['Respetá a todos los miembros','No hagas spam ni flood','Usá cada canal correctamente','No compartas contenido inapropiado','Evitá generar conflictos o discusiones tóxicas','No promociones otros servidores sin permiso','No abuses de menciones o pings','Seguí las indicaciones del staff','No evadas sanciones usando multicuentas','Mantené un ambiente tranquilo para todos']
+  }
+};
+
+/* ---------- estado ---------- */
+let DATA = null, MODE = 'demo', db = null, auth = null, USER = null, IS_ADMIN = false;
+let CAL = null, CAL_SEL = null;
+const ADM = {tab:'partidos', edit:null, liga:'rhl'};
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const DIAS = ['dom','lun','mar','mié','jue','vie','sáb'];
+const DIAS_L = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function dt(p){ const [y,m,d]=(p.fecha||'2000-01-01').split('-').map(Number); const [h,mi]=(p.hora||'00:00').split(':').map(Number); return new Date(y,m-1,d,h,mi); }
+const hm = d => pad(d.getHours())+':'+pad(d.getMinutes());
+const fCorta = p => { const d=dt(p); return `${DIAS[d.getDay()]} ${pad(d.getDate())}/${pad(d.getMonth()+1)}`; };
+const fLarga = p => { const d=dt(p); return `${DIAS_L[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`; };
+const jugado = p => p.gp !== undefined && p.gp !== null && p.gp !== '';
+const resultado = p => !jugado(p) ? null : (+p.gp > +p.gr ? 'g' : +p.gp < +p.gr ? 'p' : 'e');
+const ligasArr = () => Object.entries(DATA.ligas||{}).map(([id,l])=>({id,...l})).sort((a,b)=>(a.orden||9)-(b.orden||9));
+const partidosArr = () => Object.entries(DATA.partidos||{}).map(([id,p])=>({id,...p})).sort((a,b)=>dt(a)-dt(b));
+const liga = id => { const l=(DATA.ligas||{})[id]; return l ? {id,...l} : null; };
+const jug = id => (DATA.jugadores||{})[id] || {nombre:id, discord:''};
+const logoImg = (l,cls='') => l.logo ? `<img ${cls?`class="${cls}" `:''}src="${esc(l.logo)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'sinlogo '+this.className,textContent:'${esc((l.nombre||'?')[0])}',style:'--liga:${esc(l.color)}'}))">` : `<span class="sinlogo ${cls}" style="--liga:${esc(l.color)}">${esc((l.nombre||'?')[0])}</span>`;
+const firmaMin = p => { const l=liga(p.liga); return l && l.firmaMin!==undefined && l.firmaMin!=='' ? +l.firmaMin : 30; };
+const cierreFirma = p => new Date(dt(p).getTime() - firmaMin(p)*60000);
+const plantel = l => Object.entries(l.plantel||{}).map(([id,x])=>({id,...x,...{nombre:jug(id).nombre, discord:x.nick||jug(id).discord}}));
+function falta(ms){
+  if (ms <= 0) return null;
+  const m = Math.ceil(ms/60000);
+  if (m < 60) return m+' min';
+  const h = Math.floor(m/60), r = m%60;
+  if (h < 48) return h+' h'+(r?' '+r+' min':'');
+  return Math.round(h/24)+' días';
+}
+function diasHasta(iso){ if(!iso) return null; const [y,m,d]=iso.split('-').map(Number); const t=new Date(); t.setHours(0,0,0,0); return Math.round((new Date(y,m-1,d)-t)/86400000); }
+
+/* ---------- componentes ---------- */
+function cardPartido(p, full=true){
+  const l = liga(p.liga) || {nombre:'?',color:'#888'};
+  const loc = p.condicion === 'local';
+  const A = loc ? US : p.rival, B = loc ? p.rival : US;
+  const ga = loc ? p.gp : p.gr, gb = loc ? p.gr : p.gp;
+  const r = resultado(p);
+  const centro = jugado(p) ? `<span class="marcador">${esc(ga)}–${esc(gb)}</span>` : `<span class="hora">${esc(p.hora)}</span>`;
+  const meta = [`<b>${esc(l.nombre)}</b>`, p.jornada?`Fecha ${esc(p.jornada)}`:'', `${fCorta(p)} ${esc(p.hora)}`, p.sala?esc(p.sala):''].filter(Boolean).map(x=>`<span>${x}</span>`).join('');
+  let extra = '';
+  if (jugado(p)) {
+    const tags = [];
+    if (p.tipo) tags.push(`<span class="tag ${p.tipo==='DF a favor'?'ok':'bad'}">${esc(p.tipo)}</span>`);
+    if (p.rec==='pendiente'){ const lim=new Date(dt(p).getTime()+2*86400000); tags.push(`<span class="tag warn">Rec pendiente, vence ${pad(lim.getDate())}/${pad(lim.getMonth()+1)}</span>`); }
+    if (p.rec==='enviada') tags.push(`<span class="tag ok">Rec enviada</span>`);
+    extra += tags.length ? `<div class="extra">${tags.join(' ')}</div>` : '';
+    const t = statsTxt(p);
+    if (full && (t.g||t.a)) extra += `<div class="extra">${t.g?`Goles: ${esc(t.g)}`:''}${t.g&&t.a?'<br>':''}${t.a?`Asistencias: ${esc(t.a)}`:''}</div>`;
+    if (full && p.nota) extra += `<div class="extra muted">${esc(p.nota)}</div>`;
+    if (full) extra += checklist(p);
+    if (full && p.informe) extra += `<div class="btns"><button class="btn sm" data-informe="${esc(p.id)}">Ver informe del partido</button><button class="btn sm ghost" data-informe-dl="${esc(p.id)}">Descargar PDF</button></div>`;
+    if (full && p.replay) extra += `<div class="btns"><button class="btn sm ghost" data-replay="${esc(p.id)}">Descargar repetición</button><a class="muted" style="align-self:center" href="https://www.haxball.com/replay" target="_blank" rel="noopener">Se mira en haxball.com/replay</a></div>`;
+  } else {
+    const c = cierreFirma(p);
+    extra += firmaMin(p) ? `<div class="extra">Firmas hasta las <b>${hm(c)}</b> <span class="muted" data-cd="${c.getTime()}"></span></div>`
+      : `<div class="extra">Se firma en la sala. Empieza a las <b>${esc(p.hora)}</b> <span class="muted" data-cd="${c.getTime()}"></span></div>`;
+    if (full && p.nota) extra += `<div class="extra muted">${esc(p.nota)}</div>`;
+    const links = [];
+    const lf = liga(p.liga);
+    if (lf?.firmaUrl) links.push(`<a class="btn sm" href="${esc(lf.firmaUrl)}" target="_blank" rel="noopener">Firmar</a>`);
+    if (p.ssUrl) links.push(`<a class="btn sm ghost" href="${esc(p.ssUrl)}" target="_blank" rel="noopener">Mandar SS</a>`);
+    if (full && links.length) extra += `<div class="btns">${links.join('')}</div>`;
+    if (full) extra += checklist(p);
+  }
+  return `<article class="partido ${r?'r-'+r:''}" style="--liga:${esc(l.color)}">
+    <div class="meta">${meta}</div>
+    <div class="enf"><span class="eq ${A===US?'nos':''}">${esc(A)}</span>${centro}<span class="eq ${B===US?'nos':''}">${esc(B)}</span></div>
+    ${extra}</article>`;
+}
+
+function checklist(p){
+  const l = liga(p.liga); if (!l) return '';
+  const ins = plantel(l).filter(j=>j.estado==='inscripto');
+  if (!ins.length) return '';
+  const fi = p.firmas||{}, ss = p.ss||{};
+  const nf = ins.filter(j=>fi[j.id]).length, ns = ins.filter(j=>ss[j.id]).length;
+  const filas = ins.map(j=>`<div>${esc(j.nombre)}: <span class="${fi[j.id]?'si':'no'}">${fi[j.id]?'firmó':'sin firma'}</span>, <span class="${ss[j.id]?'si':'no'}">${ss[j.id]?'SS ok':'sin SS'}</span></div>`).join('');
+  return `<details><summary>Firmaron ${nf} y mandaron SS ${ns} de ${ins.length}</summary><div class="checks">${filas}</div></details>`;
+}
+
+function statsTxt(p){
+  const st = p.stats||{}, ids = Object.keys(st);
+  if (!ids.length) return {g:p.goles||'', a:p.asist||''};
+  const f = k => ids.filter(id=>+st[id][k]>0).sort((x,y)=>st[y][k]-st[x][k]).map(id=>jug(id).nombre+(st[id][k]>1?' x'+st[id][k]:'')).join(', ');
+  return {g:f('g'), a:f('a')};
+}
+function statsJug(ligaId){
+  const acc = {};
+  partidosArr().filter(p=>!ligaId||p.liga===ligaId).forEach(p=>Object.entries(p.stats||{}).forEach(([id,x])=>{
+    const a = acc[id] ||= {g:0,a:0,pj:0}; a.g += +x.g||0; a.a += +x.a||0; a.pj++; }));
+  return acc;
+}
+function tablaStats(ligaId){
+  const rows = Object.entries(statsJug(ligaId)).filter(([,x])=>x.g||x.a).sort((a,b)=>b[1].g-a[1].g||b[1].a-a[1].a);
+  if (!rows.length) return '<p class="muted">Todavía no hay goles ni asistencias cargados.</p>';
+  return `<div class="scroll"><table class="tabla"><thead><tr><th>#</th><th>Jugador</th><th>Goles</th><th>Asist.</th><th>G+A</th></tr></thead><tbody>${
+    rows.map(([id,x],i)=>`<tr><td>${i+1}</td><td>${esc(jug(id).nombre)}</td><td><b>${x.g}</b></td><td>${x.a}</td><td>${x.g+x.a}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function avisos(){
+  const out = [];
+  for (const l of ligasArr()){
+    const pl = plantel(l);
+    const pend = pl.filter(j=>j.estado==='pendiente');
+    const ins = pl.filter(j=>j.estado==='inscripto');
+    if (pend.length) out.push(`<div class="aviso"><b>${esc(l.nombre)}:</b> faltan anotarse ${esc(pend.map(j=>j.nombre).join(', '))}.${l.mercado?' '+esc(l.mercado):''}</div>`);
+    else if (l.mercado) out.push(`<div class="aviso"><b>${esc(l.nombre)}:</b> ${esc(l.mercado)}</div>`);
+    if (l.cupo && ins.length+pend.length > l.cupo) out.push(`<div class="aviso"><b>${esc(l.nombre)}:</b> hay ${ins.length+pend.length} jugadores para ${l.cupo} lugares. Uno o más van a quedar afuera.</div>`);
+    if (l.dfMax && l.dfContra >= 2) out.push(`<div class="aviso"><b>${esc(l.nombre)}:</b> llevamos ${l.dfContra} de ${l.dfMax} DF en contra. Con ${l.dfMax} nos expulsan.</div>`);
+  }
+  return out.length ? `<div class="avisos">${out.join('')}</div>` : '';
+}
+
+/* ---------- páginas ---------- */
+function pageInicio(){
+  const ps = partidosArr(), now = Date.now();
+  const prox = ps.find(p => !jugado(p) && dt(p).getTime() > now - 3*3600e3);
+  let hero;
+  if (prox){
+    const l = liga(prox.liga), c = cierreFirma(prox);
+    const btn = [l?.firmaUrl?`<a class="btn" href="${esc(l.firmaUrl)}" target="_blank" rel="noopener">Firmar</a>`:'', prox.ssUrl?`<a class="btn ghost" href="${esc(prox.ssUrl)}" target="_blank" rel="noopener">Mandar SS</a>`:'', `<a class="btn ghost" href="#/liga/${esc(prox.liga)}">Ver ${esc(l?.nombre)}</a>`].join('');
+    hero = `<div class="hero" style="--liga:${esc(l?.color)}"><div class="hero-in">
+      <img class="crest" src="assets/prime.png" alt="Escudo de Prime Hax">
+      <div>
+        <div class="ctx">${logoImg(l||{})}Próximo partido en ${esc(l?.nombre)}, fecha ${esc(prox.jornada||'')}</div>
+        <div class="versus"><span>${prox.condicion==='local'?'Recibimos a':'Visitamos a'}</span>${esc(prox.rival)}</div>
+        <div class="cuando">${fLarga(prox)}, ${esc(prox.hora)}${prox.sala?' en '+esc(prox.sala):''}</div>
+        <div class="cd" data-cdbox="${c.getTime()}">${firmaMin(prox)?`Firmas hasta las ${hm(c)}`:`Se firma en la sala, empieza ${esc(prox.hora)}`} <span data-cd="${c.getTime()}"></span></div>
+        <div class="btns">${btn}</div>
+      </div></div></div>`;
+  } else {
+    const ult = [...ps].reverse().find(jugado);
+    if (ult){
+      const l = liga(ult.liga), r = resultado(ult);
+      const txt = r==='g'?'Ganamos':r==='p'?'Perdimos':'Empatamos';
+      hero = `<div class="hero" style="--liga:${esc(l?.color)}"><div class="hero-in">
+        <img class="crest" src="assets/prime.png" alt="Escudo de Prime Hax">
+        <div>
+          <div class="ctx">${logoImg(l||{})}Último partido, ${esc(l?.nombre)}</div>
+          <div class="versus"><span>${txt} contra</span>${esc(ult.rival)}</div>
+          <div class="score">${esc(ult.gp)}–${esc(ult.gr)}${ult.tipo?` <span class="tag">${esc(ult.tipo)}</span>`:''}</div>
+          <p class="muted">Todavía no hay próximos partidos cargados. Las ligas publican el fixture cada semana.</p>
+        </div></div></div>`;
+    } else {
+      hero = `<div class="hero"><div class="hero-in"><img class="crest" src="assets/prime.png" alt=""><div><div class="versus">Prime Hax</div><p class="muted">Todavía no hay partidos cargados.</p></div></div></div>`;
+    }
+  }
+  const cards = ligasArr().map(l=>{
+    const pl = ps.filter(p=>p.liga===l.id);
+    const u = [...pl].reverse().find(jugado), n = pl.find(p=>!jugado(p));
+    const uTxt = u ? `${esc(u.gp)}–${esc(u.gr)} vs ${esc(u.rival)}` : 'Sin partidos';
+    const nTxt = n ? `${fCorta(n)} ${esc(n.hora)} vs ${esc(n.rival)}` : 'A confirmar';
+    return `<a class="liga-card" href="#/liga/${esc(l.id)}" style="--liga:${esc(l.color)}">
+      <div class="head">${logoImg(l)}<div><h3>${esc(l.nombre)}</h3><span class="muted">${esc(l.division)}${l.formato?', '+esc(l.formato):''}</span></div></div>
+      <div class="row"><span class="muted">Último</span><span>${uTxt}</span></div>
+      <div class="row"><span class="muted">Próximo</span><span>${nTxt}</span></div></a>`;
+  }).join('');
+  const recientes = ps.filter(jugado).reverse().slice(0,6).map(p=>cardPartido(p,false)).join('');
+  const av = avisos();
+  return `${hero}
+    ${av?`<section><h2>Avisos</h2>${av}</section>`:''}
+    <section><h2>Ligas</h2><div class="ligas">${cards}</div></section>
+    ${recientes?`<section><h2>Resultados</h2><div class="lista">${recientes}</div></section>`:''}`;
+}
+
+function pageCalendario(){
+  const ps = partidosArr();
+  if (!CAL){
+    const ref = ps.find(p=>!jugado(p)) || ps[ps.length-1];
+    const d = ref ? dt(ref) : new Date();
+    CAL = {y:d.getFullYear(), m:d.getMonth()};
+  }
+  const first = new Date(CAL.y, CAL.m, 1);
+  const start = new Date(first); start.setDate(1 - ((first.getDay()+6)%7));
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const byDay = {};
+  ps.forEach(p=>{ (byDay[p.fecha] ||= []).push(p); });
+  let cells = ['lun','mar','mié','jue','vie','sáb','dom'].map(d=>`<div class="dow">${d}</div>`).join('');
+  for (let i=0;i<42;i++){
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    if (i>=35 && d.getMonth()!==CAL.m) break;
+    const key = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const chips = (byDay[key]||[]).map(p=>{
+      const l = liga(p.liga)||{};
+      const r = jugado(p) ? ` ${p.gp}–${p.gr}` : ` ${p.hora}`;
+      return `<button class="chip ${CAL_SEL===p.id?'sel':''}" style="--liga:${esc(l.color)}" data-sel="${esc(p.id)}" title="${esc(l.nombre)}: ${esc(p.rival)}${esc(r)}">${esc(l.nombre)}${esc(r)}</button>`;
+    }).join('');
+    cells += `<div class="dia ${d.getMonth()!==CAL.m?'fuera':''} ${+d===+hoy?'hoy':''}"><span class="n">${d.getDate()}</span>${chips}</div>`;
+  }
+  const leyenda = ligasArr().map(l=>`<span style="--liga:${esc(l.color)}"><i></i>${esc(l.nombre)}</span>`).join('');
+  const sel = CAL_SEL && DATA.partidos?.[CAL_SEL] ? cardPartido({id:CAL_SEL,...DATA.partidos[CAL_SEL]}) : '';
+  const delMes = ps.filter(p=>{const d=dt(p);return d.getMonth()===CAL.m&&d.getFullYear()===CAL.y;});
+  return `<div class="cal-head"><button class="btn ghost sm" data-cal="-1" aria-label="Mes anterior">Anterior</button>
+      <h2>${MESES[CAL.m][0].toUpperCase()+MESES[CAL.m].slice(1)} ${CAL.y}</h2>
+      <button class="btn ghost sm" data-cal="1" aria-label="Mes siguiente">Siguiente</button></div>
+    <div class="cal">${cells}</div>
+    <div class="leyenda">${leyenda}</div>
+    <div id="cal-sel">${sel || (delMes.length ? '<p class="muted">Tocá un partido para ver el detalle.</p>' : '<p class="muted">No hay partidos cargados este mes.</p>')}</div>
+    ${delMes.length?`<section><h2>Partidos del mes</h2><div class="lista">${delMes.map(p=>cardPartido(p)).join('')}</div></section>`:''}`;
+}
+
+function pageLiga(id){
+  const l = liga(id);
+  if (!l) return `<h2>No encontramos esa liga</h2><p><a href="#/">Volver al inicio</a></p>`;
+  const pl = plantel(l);
+  const ins = pl.filter(j=>j.estado==='inscripto'), pend = pl.filter(j=>j.estado==='pendiente');
+  const rolOrden = {DT:0,C:1,SC:2};
+  ins.sort((a,b)=>(rolOrden[a.rol]??9)-(rolOrden[b.rol]??9) || a.nombre.localeCompare(b.nombre));
+  const jHtml = (j,cls='') => `<div class="jug ${cls}"><div><b>${esc(j.nombre)}</b><small>${esc(j.discord)}</small></div>${j.rol?`<span class="tag">${esc(j.rol==='C'?'Capitán':j.rol==='SC'?'Subcapitán':j.rol)}</span>`:''}${cls?'<span class="tag warn">Falta anotarse</span>':''}</div>`;
+  const reg = (DATA.reglamentos||{})[l.reglamento];
+  const serv = (DATA.servidor||{})[l.servidor];
+  const ps = partidosArr().filter(p=>p.liga===id);
+  const prox = ps.filter(p=>!jugado(p)), jug_ = ps.filter(jugado).reverse();
+  const total = ins.length + pend.length;
+  const datos = [
+    `<div class="dato"><div class="muted">Firma</div><div class="v">${l.firmaMin?esc(l.firmaMin>=60?(l.firmaMin/60)+' h':l.firmaMin+' min'):'En la sala'}</div><div class="muted">${l.firmaMin?'antes del partido':'antes de empezar'}</div></div>`,
+    `<div class="dato"><div class="muted">Plantel</div><div class="v ${l.cupo&&total>l.cupo?'warn':''}">${ins.length}${l.cupo?' / '+l.cupo:''}</div><div class="muted">${pend.length?(pend.length===1?'falta anotarse 1':'faltan anotarse '+pend.length):'anotados'}</div></div>`,
+    `<div class="dato"><div class="muted">Anti-DF usados</div><div class="v">${esc(l.antiDfUsados||0)} / ${esc(l.antiDfMax||0)}</div><div class="muted">en el torneo</div></div>`,
+    l.dfMax ? `<div class="dato"><div class="muted">DF en contra</div><div class="v ${l.dfContra>=2?'bad':''}">${esc(l.dfContra||0)} / ${esc(l.dfMax)}</div><div class="muted">con ${esc(l.dfMax)} nos expulsan</div></div>` : ''
+  ].join('');
+  const tabla = tablaHtml(id);
+  return `<div class="liga-top" style="--liga:${esc(l.color)}">
+      ${logoImg(l)}
+      <div><h1>${esc(l.nombreLargo||l.nombre)}</h1>
+        <p class="muted">${esc(l.division)}${l.formato?', '+esc(l.formato):''}</p>
+        <div class="btns">
+          ${l.discord?`<a class="btn" href="${esc(l.discord)}" target="_blank" rel="noopener">Unirme al Discord</a>`:''}
+          ${l.firmaUrl?`<a class="btn ghost" href="${esc(l.firmaUrl)}" target="_blank" rel="noopener">Ir al canal de firmas</a>`:''}
+        </div>
+        <p class="muted">El canal de firmas solo abre si ya estás dentro del servidor.</p>
+      </div></div>
+    ${l.mercado?`<div class="aviso" style="margin-top:18px">${esc(l.mercado)}</div>`:''}
+    <div class="datos">${datos}</div>
+    ${reg?.clave?.length?`<section><h2>Lo que no te podés olvidar</h2><ul class="reglas">${reg.clave.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></section>`:''}
+    ${prox.length?`<section><h2>Próximos partidos</h2><div class="lista">${prox.map(p=>cardPartido(p)).join('')}</div></section>`:''}
+    <section><h2>Plantel</h2>
+      <div class="plantel">${ins.map(j=>jHtml(j)).join('')}${pend.map(j=>jHtml(j,'pend')).join('')}</div>
+      ${l.cupo&&total>l.cupo?`<div class="aviso" style="margin-top:12px">Hay ${total} jugadores para ${l.cupo} lugares.</div>`:''}
+    </section>
+    <section><h2>Goles y asistencias</h2>${tablaStats(id)}</section>
+    ${jug_.length?`<section><h2>Resultados</h2><div class="lista">${jug_.map(p=>cardPartido(p)).join('')}</div></section>`:''}
+    ${tabla?`<section><h2>Posiciones</h2>${tabla}</section>`:''}
+    ${reg||serv?`<section><h2>Reglamento</h2>
+      ${reg?`<details><summary>${esc(reg.titulo)}</summary><div class="texto">${esc(reg.texto)}</div></details>`:''}
+      ${serv?`<details style="margin-top:10px"><summary>Reglas del servidor</summary><ul class="reglas texto" style="white-space:normal;padding-left:2em">${serv.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>`:''}
+    </section>`:''}`;
+}
+
+function tablaHtml(id){
+  const raw = (DATA.tablas||{})[id]; if (!raw) return '';
+  const rows = raw.split('\n').map(r=>r.split(';').map(x=>x.trim())).filter(r=>r[0]);
+  if (!rows.length) return '';
+  const body = rows.map((r,i)=>{ const [eq,pts,pj,v,e,d,gf,gc]=r; const dg=(+gf||0)-(+gc||0);
+    return `<tr class="${eq===US?'nos':''}"><td>${i+1}</td><td>${esc(eq)}</td><td><b>${esc(pts)}</b></td><td>${esc(pj)}</td><td>${esc(v)}</td><td>${esc(e)}</td><td>${esc(d)}</td><td>${esc(gf)}</td><td>${esc(gc)}</td><td>${dg>0?'+':''}${dg}</td></tr>`; }).join('');
+  return `<div class="scroll"><table class="tabla"><thead><tr><th>#</th><th>Equipo</th><th>Pts</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th></tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function pageHistorico(){
+  const ls = ligasArr(), ps = partidosArr().filter(jugado);
+  const rec = ps => { const r={pj:0,g:0,e:0,p:0,gf:0,gc:0}; ps.forEach(p=>{ r.pj++; r.gf+=+p.gp; r.gc+=+p.gr; r[resultado(p)]++; }); return r; };
+  const fila = (n,r,cls='') => { const dg=r.gf-r.gc; return `<tr class="${cls}"><td class="l">${n}</td><td>${r.pj}</td><td>${r.g}</td><td>${r.e}</td><td>${r.p}</td><td>${r.gf}</td><td>${r.gc}</td><td>${dg>0?'+':''}${dg}</td></tr>`; };
+  const equipo = `<div class="scroll"><table class="tabla"><thead><tr><th class="l">Liga</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th></tr></thead><tbody>${
+    ls.map(l=>fila(esc(l.nombre),rec(ps.filter(p=>p.liga===l.id)))).join('')}${fila('Total',rec(ps),'nos')}</tbody></table></div>`;
+  const por = Object.fromEntries(ls.map(l=>[l.id,statsJug(l.id)]));
+  const tot = statsJug();
+  const rows = Object.entries(tot).filter(([,x])=>x.g||x.a).sort((a,b)=>b[1].g-a[1].g||b[1].a-a[1].a);
+  const jugs = rows.length ? `<div class="scroll"><table class="tabla"><thead><tr><th>#</th><th>Jugador</th>${ls.map(l=>`<th>${esc(l.nombre)}<br><small>G / A</small></th>`).join('')}<th>Goles</th><th>Asist.</th></tr></thead><tbody>${
+    rows.map(([id,x],i)=>`<tr><td>${i+1}</td><td>${esc(jug(id).nombre)}</td>${ls.map(l=>{const y=por[l.id][id]; return `<td>${y?y.g+' / '+y.a:'–'}</td>`;}).join('')}<td><b>${x.g}</b></td><td>${x.a}</td></tr>`).join('')}</tbody></table></div>`
+    : '<p class="muted">Todavía no hay goles ni asistencias cargados.</p>';
+  return `<h1 style="font-size:clamp(2.4rem,6vw,3.6rem)">Histórico</h1>
+    <p class="muted">Todo lo que jugó Prime Hax, sumando las tres ligas.</p>
+    <section><h2>Resultados del equipo</h2>${equipo}</section>
+    <section><h2>Goles y asistencias</h2>${jugs}</section>`;
+}
+
+function pageSS(){
+  const ls = ligasArr();
+  const porLiga = ls.map(l=>{
+    const txt = l.reglamento==='rhl' ? 'No mandar SS son 2 o 3 fechas de sanción, y para cobrar un DF hacen falta 4 SS o más.' : 'Sin SS válida no cuentan tus goles ni tus asistencias.';
+    return `<li><b>${esc(l.nombre)}:</b> ${txt}</li>`;
+  }).join('');
+  return `<h1 style="font-size:clamp(2.4rem,6vw,3.6rem)">Cómo sacar el SS</h1>
+    <p class="muted" style="max-width:62ch">El SS es la captura que pide la liga antes de cada partido para comprobar que sos vos el que juega. Se manda en todos los partidos, en todas las ligas.</p>
+    <section><h2>Paso a paso</h2><ol class="pasos">
+      <li><div><b>Abrí Haxball y entrá a la sala del partido</b><br><span class="muted">Tu nick tiene que verse en pantalla.</span></div></li>
+      <li><div><b>Abrí el Discord de la liga al lado</b><br><span class="muted">Tiene que verse tu usuario de Discord.</span></div></li>
+      <li><div><b>Sacá la captura de toda la pantalla</b><br><span class="muted">Con la hora del sistema visible. En Windows: tecla Windows + Impr Pant, o Windows + Shift + S.</span></div></li>
+      <li><div><b>Mandala donde indica el partido</b><br><span class="muted">Cada partido tiene su botón "Mandar SS" cuando la liga publica el canal.</span></div></li>
+    </ol></section>
+    <section><h2>Qué pasa si no lo mandás</h2><ul class="reglas">${porLiga}</ul></section>`;
+}
+
+/* ---------- admin ---------- */
+function pageAdmin(){
+  if (MODE==='demo') return `<h2>Panel</h2><p class="muted" style="max-width:65ch">El sitio está en vista previa con los datos iniciales. Para usar el panel, pegá el <code>firebaseConfig</code> del proyecto en la parte de arriba del script de <code>index.html</code>.</p>`;
+  if (!USER) return `<h2>Entrar al panel</h2>
+    <div class="form" style="max-width:460px">
+      <label class="full">Email<input id="lg-mail" type="email" autocomplete="username"></label>
+      <label class="full">Contraseña<input id="lg-pass" type="password" autocomplete="current-password"></label>
+      <div class="full btns" style="margin:0"><button class="btn" data-act="login">Entrar</button></div>
+      <p class="full muted" id="lg-err"></p>
+    </div>`;
+  if (!IS_ADMIN) return `<h2>Sin permiso</h2><p class="muted">La cuenta ${esc(USER.email||USER.uid)} no está en la lista de admins. UID: <code>${esc(USER.uid)}</code></p><button class="btn ghost" data-act="logout">Salir</button>`;
+  if (!DATA) return `<h2>Base vacía</h2><p class="muted">Todavía no hay datos en <code>/prime</code>. Cargá los datos iniciales (las 3 ligas, planteles, fecha 1 y reglamentos).</p><button class="btn" data-act="seed">Cargar datos iniciales</button>`;
+  const alertas = ligasArr().map(l=>{ const d=diasHasta(l.discordVence); if(d===null) return ''; if(d<0) return `<div class="aviso">El link de Discord de <b>${esc(l.nombre)}</b> venció. Pedí uno nuevo y cargalo en Ligas.</div>`; if(d<=7) return `<div class="aviso">El link de Discord de <b>${esc(l.nombre)}</b> vence en ${d} día${d===1?'':'s'}.</div>`; return ''; }).join('');
+  const tabs = [['partidos','Partidos'],['ligas','Ligas'],['planteles','Planteles'],['jugadores','Jugadores'],['tablas','Tablas'],['reglas','Reglamentos']]
+    .map(([k,t])=>`<button class="${ADM.tab===k?'on':''}" data-tab="${k}">${t}</button>`).join('');
+  let body = '';
+  if (ADM.tab==='partidos') body = admPartidos();
+  if (ADM.tab==='ligas') body = admLigas();
+  if (ADM.tab==='planteles') body = admPlanteles();
+  if (ADM.tab==='jugadores') body = admJugadores();
+  if (ADM.tab==='tablas') body = admTablas();
+  if (ADM.tab==='reglas') body = admReglas();
+  return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">Panel</h2><button class="btn ghost sm" data-act="logout">Salir</button></div>
+    ${alertas?`<div class="avisos" style="margin-top:14px">${alertas}</div>`:''}
+    <div class="tabs">${tabs}</div>${body}`;
+}
+
+const opt = (v,t,sel) => `<option value="${esc(v)}" ${String(v)===String(sel??'')?'selected':''}>${esc(t)}</option>`;
+
+function admPartidos(){
+  if (ADM.edit){
+    const p = ADM.edit==='nuevo' ? {liga:ADM.liga, condicion:'local', hora:'22:00'} : {...DATA.partidos[ADM.edit]};
+    const ligas = ligasArr().map(l=>opt(l.id,l.nombre,p.liga)).join('');
+    return `<div class="form" id="f-partido">
+      <label>Liga<select name="liga">${ligas}</select></label>
+      <label>Fecha n°<input name="jornada" type="number" min="1" value="${esc(p.jornada)}"></label>
+      <label>Día<input name="fecha" type="date" value="${esc(p.fecha)}"></label>
+      <label>Hora<input name="hora" type="time" value="${esc(p.hora)}"></label>
+      <label>Sala<input name="sala" value="${esc(p.sala)}" placeholder="SS1"></label>
+      <label>Rival<input name="rival" value="${esc(p.rival)}"></label>
+      <label>Somos<select name="condicion">${opt('local','Local',p.condicion)}${opt('visitante','Visitante',p.condicion)}</select></label>
+      <label>Link para mandar SS<input name="ssUrl" type="url" value="${esc(p.ssUrl)}"></label>
+      <label>Goles Prime (vacío si no se jugó)<input name="gp" type="number" min="0" value="${esc(p.gp)}"></label>
+      <label>Goles rival<input name="gr" type="number" min="0" value="${esc(p.gr)}"></label>
+      <label>Tipo de resultado<select name="tipo">${opt('','Normal',p.tipo)}${opt('DF a favor','DF a favor',p.tipo)}${opt('DF en contra','DF en contra',p.tipo)}${opt('DN','DN',p.tipo)}</select></label>
+      <label>Rec<select name="rec">${opt('','—',p.rec)}${opt('pendiente','Pendiente',p.rec)}${opt('enviada','Enviada',p.rec)}</select></label>
+      <label class="full">Repetición (.hbr2, hasta 8 MB)<input name="replayFile" type="file" accept=".hbr2,.hbr"></label>
+      ${p.replay?`<label class="full" style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="replayDel"> Quitar la repetición actual (${esc(p.replay.name)})</label>`:''}
+      <label class="full">Informe del partido (PDF, hasta 6 MB)<input name="informeFile" type="file" accept="application/pdf,.pdf"></label>
+      ${p.informe?`<label class="full" style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="informeDel"> Quitar el informe actual (${esc(p.informe.name)})</label>`:''}
+      <label class="full">Nota<input name="nota" value="${esc(p.nota)}"></label>
+      <div class="full"><h3 style="margin:6px 0 4px">Firmas, SS, goles y asistencias</h3><p class="muted" style="margin:0 0 10px">Cargá solo los goles y asistencias que la liga cuenta. En un DF dejalos en cero.</p><div id="f-checks">${admChecks(p)}</div></div>
+      <div class="full btns" style="margin:0"><button class="btn" data-act="guardar-partido">Guardar partido</button><button class="btn ghost" data-act="cancelar">Cancelar</button>
+      ${ADM.edit!=='nuevo'?'<button class="btn danger" data-act="borrar-partido">Borrar partido</button>':''}</div>
+    </div>`;
+  }
+  const rows = partidosArr().reverse().map(p=>{ const l=liga(p.liga)||{};
+    return `<div class="adm-row" style="--liga:${esc(l.color)}"><div><b>${esc(l.nombre)}</b> ${fCorta(p)} ${esc(p.hora)} vs ${esc(p.rival)} <span class="muted">${jugado(p)?esc(p.gp)+'–'+esc(p.gr):'por jugar'}</span></div><button class="btn ghost sm" data-editp="${esc(p.id)}">Editar</button></div>`; }).join('');
+  return `<div class="btns" style="margin:0 0 14px"><button class="btn" data-act="nuevo-partido">Nuevo partido</button></div><div class="lista">${rows||'<p class="muted">No hay partidos.</p>'}</div>`;
+}
+function admChecks(p){
+  const l = liga(p.liga); if (!l) return '';
+  const ins = plantel(l).filter(j=>j.estado==='inscripto');
+  const ss = p.ss||{}, st = p.stats||{};
+  const fi = p.firmas||{};
+  return `<div class="chk-row muted"><span>Jugador</span><span>Firmó</span><span>SS</span><span>Goles</span><span>Asist.</span></div>` +
+    ins.map(j=>`<div class="chk-row"><span>${esc(j.nombre)}</span>
+      <input type="checkbox" data-f="${esc(j.id)}" ${fi[j.id]?'checked':''} aria-label="${esc(j.nombre)} firmó">
+      <input type="checkbox" data-s="${esc(j.id)}" ${ss[j.id]?'checked':''} aria-label="${esc(j.nombre)} mandó SS">
+      <input type="number" min="0" data-g="${esc(j.id)}" value="${st[j.id]?.g||''}" aria-label="Goles de ${esc(j.nombre)}">
+      <input type="number" min="0" data-a="${esc(j.id)}" value="${st[j.id]?.a||''}" aria-label="Asistencias de ${esc(j.nombre)}"></div>`).join('');
+}
+
+function admLigas(){
+  const nueva = `<div class="form" style="margin-bottom:18px;border-top:3px solid var(--silver)">
+    <h3 class="full">Agregar una liga</h3>
+    <label>Nombre corto<input id="nl-nombre" placeholder="Golden League"></label>
+    <label>Nombre largo (opcional)<input id="nl-largo"></label>
+    <label>División<input id="nl-div" placeholder="2da división"></label>
+    <label>Formato<input id="nl-formato" placeholder="x5"></label>
+    <label>Color<input id="nl-color" type="color" value="#E0B15A"></label>
+    <label>Orden en el sitio<input id="nl-orden" type="number" value="${ligasArr().length+1}"></label>
+    <label class="full">Link de Discord<input id="nl-discord"></label>
+    <label class="full">Canal de firmas<input id="nl-firma"></label>
+    <label>Cierre de firma en minutos<input id="nl-firmamin" type="number" min="0" value="0"></label>
+    <label>Cupo del plantel<input id="nl-cupo" type="number" value="20"></label>
+    <label>Anti-DF máximo<input id="nl-antidf" type="number" min="0" value="3"></label>
+    <label>Tope de DF (0 = sin tope)<input id="nl-dfmax" type="number" min="0" value="0"></label>
+    <label>Reglamento<select id="nl-reg"><option value="">Sin reglamento</option>${Object.entries(DATA.reglamentos||{}).map(([k,r])=>`<option value="${esc(k)}">${esc(r.titulo)}</option>`).join('')}</select></label>
+    <label>Archivo del logo<input id="nl-logo" placeholder="assets/golden.png"></label>
+    <div class="full"><button class="btn" data-act="nueva-liga">Crear liga</button>
+      <p class="muted">El plantel se carga después, en la pestaña Planteles. El logo hay que subirlo a la carpeta assets del repo.</p></div>
+  </div>`;
+  return nueva + ligasArr().map(l=>`<div class="form" data-liga="${esc(l.id)}" style="margin-bottom:14px;border-top:3px solid ${esc(l.color)}">
+    <h3 class="full">${esc(l.nombre)}</h3>
+    <label>Link de Discord<input name="discord" value="${esc(l.discord)}"></label>
+    <label>El link vence el<input name="discordVence" type="date" value="${esc(l.discordVence)}"></label>
+    <label class="full">Canal de firmas<input name="firmaUrl" value="${esc(l.firmaUrl)}"></label>
+    <label class="full">Aviso de mercado (vacío si no hay)<input name="mercado" value="${esc(l.mercado)}"></label>
+    <label>División<input name="division" value="${esc(l.division)}"></label>
+    <label>Cierre de firma, en minutos antes (0 = se firma en la sala)<input name="firmaMin" type="number" min="0" value="${esc(l.firmaMin)}"></label>
+    <label>Cupo del plantel<input name="cupo" type="number" value="${esc(l.cupo)}"></label>
+    <label>Anti-DF usados<input name="antiDfUsados" type="number" min="0" value="${esc(l.antiDfUsados||0)}"></label>
+    <label>Anti-DF máximo<input name="antiDfMax" type="number" min="0" value="${esc(l.antiDfMax||0)}"></label>
+    <label>DF en contra<input name="dfContra" type="number" min="0" value="${esc(l.dfContra||0)}"></label>
+    <label>Tope de DF (0 = sin tope)<input name="dfMax" type="number" min="0" value="${esc(l.dfMax||0)}"></label>
+    <label>Reglamento<select name="reglamento"><option value="">Sin reglamento</option>${Object.entries(DATA.reglamentos||{}).map(([k,r])=>opt(k,r.titulo,l.reglamento)).join('')}</select></label>
+    <div class="full"><button class="btn" data-act="guardar-liga" data-id="${esc(l.id)}">Guardar ${esc(l.nombre)}</button></div>
+  </div>`).join('');
+}
+
+function admPlanteles(){
+  const tabs = ligasArr().map(l=>`<button class="btn sm ${ADM.liga===l.id?'':'ghost'}" data-pl="${esc(l.id)}">${esc(l.nombre)}</button>`).join('');
+  const l = liga(ADM.liga); if (!l) return '';
+  const pl = l.plantel||{};
+  const rows = Object.entries(DATA.jugadores||{}).sort((a,b)=>a[1].nombre.localeCompare(b[1].nombre)).map(([id,j])=>{ const x=pl[id]||{};
+    return `<span>${esc(j.nombre)} <small class="muted">${esc(j.discord)}</small></span>
+      <select data-est="${esc(id)}" aria-label="Estado de ${esc(j.nombre)}">${opt('','No está',x.estado)}${opt('inscripto','Anotado',x.estado)}${opt('pendiente','Falta anotarse',x.estado)}</select>
+      <select data-rol="${esc(id)}" aria-label="Rol de ${esc(j.nombre)}">${opt('','—',x.rol)}${opt('DT','DT',x.rol)}${opt('C','Capitán',x.rol)}${opt('SC','Subcapitán',x.rol)}</select>
+      <input data-nick="${esc(id)}" value="${esc(x.nick)}" placeholder="Nick en esta liga" aria-label="Nick de ${esc(j.nombre)} en esta liga">`; }).join('');
+  return `<div class="btns" style="margin:0 0 14px">${tabs}</div>
+    <div class="form"><div class="full grid-pl"><span class="h">Jugador</span><span class="h">Estado</span><span class="h">Rol</span><span class="h">Nick si es distinto</span>${rows}</div>
+    <div class="full"><button class="btn" data-act="guardar-plantel">Guardar plantel de ${esc(l.nombre)}</button></div></div>`;
+}
+
+function admJugadores(){
+  const rows = Object.entries(DATA.jugadores||{}).sort((a,b)=>a[1].nombre.localeCompare(b[1].nombre)).map(([id,j])=>
+    `<div class="adm-row" style="--liga:var(--line)"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:1">
+      <input data-jn="${esc(id)}" value="${esc(j.nombre)}" aria-label="Nombre"><input data-jd="${esc(id)}" value="${esc(j.discord)}" aria-label="Discord"></div>
+      <button class="btn danger sm" data-deljug="${esc(id)}">Quitar</button></div>`).join('');
+  return `<div class="lista">${rows}</div>
+    <div class="form" style="margin-top:14px"><h3 class="full">Agregar jugador</h3>
+      <label>Nombre<input id="nj-n"></label><label>Usuario de Discord<input id="nj-d"></label>
+      <div class="full btns" style="margin:0"><button class="btn ghost" data-act="agregar-jug">Agregar</button><button class="btn" data-act="guardar-jugs">Guardar cambios</button></div></div>`;
+}
+
+function admReglas(){
+  const forms = Object.entries(DATA.reglamentos||{}).map(([k,r])=>`<div class="form" style="margin-bottom:14px">
+    <label class="full">Título<input data-rt="${esc(k)}" value="${esc(r.titulo)}"></label>
+    <label class="full">Reglas clave, una por línea (son las que se muestran arriba en la página de la liga)
+      <textarea data-rc="${esc(k)}" rows="6">${esc((r.clave||[]).join('\n'))}</textarea></label>
+    <label class="full">Reglamento completo<textarea data-rx="${esc(k)}" rows="12">${esc(r.texto||'')}</textarea></label>
+    <div class="full"><button class="btn" data-act="guardar-regla" data-id="${esc(k)}">Guardar</button></div>
+  </div>`).join('');
+  return forms + `<div class="form"><h3 class="full">Agregar un reglamento</h3>
+    <label class="full">Título<input id="nr-titulo" placeholder="Reglamento Golden League"></label>
+    <div class="full"><button class="btn ghost" data-act="nuevo-reglamento">Crear</button>
+      <p class="muted">Después lo asignás a la liga en la pestaña Ligas.</p></div></div>`;
+}
+
+function admTablas(){
+  return ligasArr().map(l=>`<div class="form" style="margin-bottom:14px"><h3 class="full">${esc(l.nombre)}</h3>
+    <label class="full">Una línea por equipo: Equipo;Pts;PJ;G;E;P;GF;GC (vacío = sin tabla)
+      <textarea data-tabla="${esc(l.id)}" rows="8">${esc((DATA.tablas||{})[l.id]||'')}</textarea></label>
+    <div class="full"><button class="btn" data-act="guardar-tabla" data-id="${esc(l.id)}">Guardar tabla de ${esc(l.nombre)}</button></div></div>`).join('');
+}
+
+/* ---------- acciones admin ---------- */
+const ref = path => db.ref(path ? 'prime/'+path : 'prime');
+function toast(t){ const el=document.createElement('div'); el.className='toast'; el.textContent=t; document.body.appendChild(el); setTimeout(()=>el.remove(),2200); }
+const fail = e => { console.error(e); alert('No se pudo guardar: '+(e.message||e)); };
+
+function fileB64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(',')[1]); r.onerror=()=>rej(new Error('No se pudo leer el archivo')); r.readAsDataURL(file); }); }
+
+async function guardarPartido(){
+  const f = $('#f-partido'), v = n => f.querySelector(`[name=${n}]`).value.trim();
+  if (!v('fecha') || !v('rival')) return alert('Completá al menos el día y el rival.');
+  const id = ADM.edit==='nuevo' ? ref('partidos').push().key : ADM.edit;
+  const prev = (DATA.partidos||{})[id] || {};
+  const o = {liga:v('liga'), jornada:v('jornada')?+v('jornada'):'', fecha:v('fecha'), hora:v('hora'), sala:v('sala'), rival:v('rival'), condicion:v('condicion'),
+    ssUrl:v('ssUrl'), gp:v('gp')===''?null:+v('gp'), gr:v('gr')===''?null:+v('gr'), tipo:v('tipo'), rec:v('rec'), nota:v('nota'), firmas:{}, ss:{}, stats:{}};
+  if (o.gp!==null && o.gr===null) o.gr = 0;
+  f.querySelectorAll('[data-f]').forEach(c=>{ if(c.checked) o.firmas[c.dataset.f]=true; });
+  f.querySelectorAll('[data-s]').forEach(c=>{ if(c.checked) o.ss[c.dataset.s]=true; });
+  f.querySelectorAll('[data-g]').forEach(i=>{ const j=i.dataset.g, g=+i.value||0, a=+f.querySelector(`[data-a="${j}"]`).value||0; if(g||a) o.stats[j]={g,a}; });
+  const file = f.querySelector('[name=replayFile]').files[0];
+  const quitar = f.querySelector('[name=replayDel]')?.checked;
+  try {
+    if (file){
+      if (file.size > 8e6) return alert('La repetición pesa más de 8 MB.');
+      toast('Subiendo repetición…');
+      await db.ref('replays/'+id).set({name:file.name, data:await fileB64(file)});
+      o.replay = {name:file.name, size:file.size};
+    } else if (quitar){ await db.ref('replays/'+id).remove(); }
+    else if (prev.replay) o.replay = prev.replay;
+    const inf = f.querySelector('[name=informeFile]').files[0];
+    const quitarInf = f.querySelector('[name=informeDel]')?.checked;
+    if (inf){
+      if (inf.type && inf.type !== 'application/pdf') return alert('El informe tiene que ser un PDF.');
+      if (inf.size > 6e6) return alert('El informe pesa más de 6 MB.');
+      toast('Subiendo informe…');
+      await db.ref('informes/'+id).set({name:inf.name, data:await fileB64(inf)});
+      o.informe = {name:inf.name, size:inf.size, subido:Date.now()};
+    } else if (quitarInf){ await db.ref('informes/'+id).remove(); }
+    else if (prev.informe) o.informe = prev.informe;
+    await ref('partidos/'+id).set(o);
+    ADM.edit=null; toast('Partido guardado'); render();
+  } catch(e){ fail(e); }
+}
+
+async function bajarReplay(id){
+  if (!db) return alert('Las repeticiones se descargan desde el sitio publicado.');
+  const v = (await db.ref('replays/'+id).get()).val();
+  if (!v) return alert('No se encontró la repetición de este partido.');
+  const bin = atob(v.data), u8 = new Uint8Array(bin.length);
+  for (let i=0;i<bin.length;i++) u8[i] = bin.charCodeAt(i);
+  const url = URL.createObjectURL(new Blob([u8],{type:'application/octet-stream'}));
+  const a = document.createElement('a'); a.href=url; a.download=v.name||'repeticion.hbr2'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+}
+
+async function blobInforme(id){
+  if (!db) throw new Error('Los informes se ven desde el sitio publicado.');
+  const v = (await db.ref('informes/'+id).get()).val();
+  if (!v) throw new Error('No se encontró el informe de este partido.');
+  const bin = atob(v.data), u8 = new Uint8Array(bin.length);
+  for (let i=0;i<bin.length;i++) u8[i] = bin.charCodeAt(i);
+  return {url:URL.createObjectURL(new Blob([u8],{type:'application/pdf'})), name:v.name||'informe.pdf'};
+}
+function bajarBlob(url,name){ const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); }
+async function verInforme(id){
+  const w = window.open('', '_blank');           // se abre en el click para que no lo bloquee el navegador
+  if (w) w.document.write('<p style="font-family:sans-serif;padding:20px">Cargando informe…</p>');
+  try {
+    const {url,name} = await blobInforme(id);
+    if (w) w.location.href = url; else bajarBlob(url,name);
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  } catch(err){ if (w) w.close(); throw err; }
+}
+async function bajarInforme(id){ const {url,name} = await blobInforme(id); bajarBlob(url,name); setTimeout(()=>URL.revokeObjectURL(url),5000); }
+
+document.addEventListener('change', e=>{
+  if (e.target.matches('#f-partido [name=liga]')){ ADM.liga = e.target.value; $('#f-checks').innerHTML = admChecks({liga:e.target.value}); }
+});
+
+document.addEventListener('click', async e=>{
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.cal){ CAL.m += +t.dataset.cal; if(CAL.m<0){CAL.m=11;CAL.y--;} if(CAL.m>11){CAL.m=0;CAL.y++;} CAL_SEL=null; return render(); }
+  if (t.dataset.sel){ CAL_SEL = t.dataset.sel; document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('sel',c===t));
+    $('#cal-sel').innerHTML = cardPartido({id:CAL_SEL,...DATA.partidos[CAL_SEL]}); tick(); return; }
+  if (t.dataset.informe){ t.disabled=true; try{ await verInforme(t.dataset.informe); } catch(err){ alert('No se pudo abrir el informe: '+err.message); } t.disabled=false; return; }
+  if (t.dataset.informeDl){ t.disabled=true; try{ await bajarInforme(t.dataset.informeDl); } catch(err){ alert('No se pudo descargar: '+err.message); } t.disabled=false; return; }
+  if (t.dataset.replay){ t.disabled=true; try{ await bajarReplay(t.dataset.replay); } catch(err){ alert('No se pudo descargar: '+err.message); } t.disabled=false; return; }
+  if (t.dataset.tab){ ADM.tab=t.dataset.tab; ADM.edit=null; return render(); }
+  if (t.dataset.editp){ ADM.edit=t.dataset.editp; return render(); }
+  if (t.dataset.pl){ ADM.liga=t.dataset.pl; return render(); }
+  if (t.dataset.deljug){ if(!confirm('¿Quitar este jugador de la base y de todos los planteles?')) return;
+    const id=t.dataset.deljug, up={['jugadores/'+id]:null}; ligasArr().forEach(l=>up[`ligas/${l.id}/plantel/${id}`]=null);
+    try{ await ref('').update(up); toast('Jugador quitado'); render(); }catch(err){fail(err);} return; }
+  const a = t.dataset.act; if (!a) return;
+  try {
+    if (a==='login'){ $('#lg-err').textContent=''; await auth.signInWithEmailAndPassword($('#lg-mail').value.trim(), $('#lg-pass').value); }
+    if (a==='login-google'){ await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+    if (a==='logout'){ await auth.signOut(); }
+    if (a==='seed'){ await ref('').set(SEED); toast('Datos iniciales cargados'); }
+    if (a==='nuevo-partido'){ ADM.edit='nuevo'; render(); }
+    if (a==='cancelar'){ ADM.edit=null; render(); }
+    if (a==='guardar-partido') await guardarPartido();
+    if (a==='borrar-partido'){ if(confirm('¿Borrar este partido?')){ await db.ref('informes/'+ADM.edit).remove(); await db.ref('replays/'+ADM.edit).remove(); await ref('partidos/'+ADM.edit).remove(); ADM.edit=null; toast('Partido borrado'); render(); } }
+    if (a==='guardar-liga'){ const f=t.closest('[data-liga]'), up={};
+      f.querySelectorAll('[name]').forEach(i=>{ up[i.name] = i.type==='number' ? (+i.value||0) : i.value.trim(); });
+      await ref('ligas/'+t.dataset.id).update(up); toast('Liga guardada'); }
+    if (a==='guardar-plantel'){ const pl={};
+      document.querySelectorAll('[data-est]').forEach(s=>{ if(!s.value) return; const id=s.dataset.est; const o={estado:s.value};
+        const r=document.querySelector(`[data-rol="${id}"]`).value, n=document.querySelector(`[data-nick="${id}"]`).value.trim();
+        if(r) o.rol=r; if(n) o.nick=n; pl[id]=o; });
+      await ref(`ligas/${ADM.liga}/plantel`).set(pl); toast('Plantel guardado'); }
+    if (a==='agregar-jug'){ const n=$('#nj-n').value.trim(), d=$('#nj-d').value.trim(); if(!n) return alert('Poné el nombre.');
+      let id=n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'')||'jugador'; while(DATA.jugadores?.[id]) id+='2';
+      await ref('jugadores/'+id).set({nombre:n,discord:d}); toast('Jugador agregado'); render(); }
+    if (a==='guardar-jugs'){ const up={};
+      document.querySelectorAll('[data-jn]').forEach(i=>{ const id=i.dataset.jn; up[`jugadores/${id}/nombre`]=i.value.trim(); up[`jugadores/${id}/discord`]=document.querySelector(`[data-jd="${id}"]`).value.trim(); });
+      await ref('').update(up); toast('Jugadores guardados'); }
+    if (a==='nueva-liga'){
+      const g = k => $('#nl-'+k).value.trim();
+      if (!g('nombre')) return alert('Poné el nombre de la liga.');
+      let id = g('nombre').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'').slice(0,20) || 'liga';
+      while (DATA.ligas?.[id]) id += '2';
+      await ref('ligas/'+id).set({nombre:g('nombre'), nombreLargo:g('largo'), division:g('div'), formato:g('formato'), color:g('color')||'#C9CED6',
+        orden:+g('orden')||9, discord:g('discord'), discordVence:'', firmaUrl:g('firma'), firmaMin:+g('firmamin')||0, cupo:+g('cupo')||20,
+        antiDfMax:+g('antidf')||0, antiDfUsados:0, dfMax:+g('dfmax')||0, dfContra:0, mercado:'', reglamento:g('reg'), servidor:'',
+        logo:g('logo')||('assets/'+id+'.png')});
+      toast('Liga creada'); render();
+    }
+    if (a==='guardar-regla'){ const k=t.dataset.id;
+      await ref('reglamentos/'+k).set({titulo:document.querySelector(`[data-rt="${k}"]`).value.trim(),
+        clave:document.querySelector(`[data-rc="${k}"]`).value.split('\n').map(x=>x.trim()).filter(Boolean),
+        texto:document.querySelector(`[data-rx="${k}"]`).value.trim()});
+      toast('Reglamento guardado'); }
+    if (a==='nuevo-reglamento'){ const ti=$('#nr-titulo').value.trim(); if(!ti) return alert('Poné el título.');
+      let id=ti.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'').slice(0,20)||'reglamento';
+      while(DATA.reglamentos?.[id]) id+='2';
+      await ref('reglamentos/'+id).set({titulo:ti, clave:[], texto:''}); toast('Reglamento creado'); render(); }
+    if (a==='guardar-tabla'){ const v=document.querySelector(`[data-tabla="${t.dataset.id}"]`).value.trim(); await ref('tablas/'+t.dataset.id).set(v||null); toast('Tabla guardada'); }
+  } catch(err){ if(a==='login'||a==='login-google'){ const el=$('#lg-err'); if(el) el.textContent='No se pudo entrar: revisá el email y la contraseña.'; } else fail(err); }
+});
+
+/* ---------- router y render ---------- */
+function route(){ const h=location.hash.replace(/^#\/?/,''); const [a,b]=h.split('/'); return {a:a||'', b}; }
+function render(){
+  const r = route();
+  const links = [['','Inicio'],['calendario','Calendario'],...(DATA?ligasArr().map(l=>['liga/'+l.id,l.nombre]):[]),['historico','Histórico'],['ss','Guía del SS']];
+  if (MODE==='live' && IS_ADMIN) links.push(['admin','Panel']);
+  const cur = r.a==='liga' ? 'liga/'+r.b : r.a;
+  $('#nav').innerHTML = links.map(([k,t])=>`<a href="#/${k}" class="${cur===k?'on':''}">${esc(t)}</a>`).join('');
+  let html;
+  if (r.a==='admin') html = pageAdmin();
+  else if (!DATA) html = MODE==='live' ? `<h2>Sin datos</h2><p class="muted">Un admin tiene que cargar los datos desde <a href="#/admin">el panel</a>.</p>` : '<p class="muted">Cargando…</p>';
+  else if (r.a==='calendario') html = pageCalendario();
+  else if (r.a==='liga') html = pageLiga(r.b);
+  else if (r.a==='ss') html = pageSS();
+  else if (r.a==='historico') html = pageHistorico();
+  else html = pageInicio();
+  $('#app').innerHTML = html;
+  tick();
+}
+function tick(){
+  const now = Date.now();
+  document.querySelectorAll('[data-cd]').forEach(el=>{ const f=falta(+el.dataset.cd-now); el.textContent = f ? `(en ${f})` : '(ya pasó)'; });
+  document.querySelectorAll('[data-cdbox]').forEach(el=>{ const ms=+el.dataset.cdbox-now; el.classList.toggle('urg', ms>0 && ms<3*3600e3); });
+}
+setInterval(tick, 30000);
+window.addEventListener('hashchange', ()=>{ if(!location.hash.startsWith('#/admin')) ADM.edit=null; window.scrollTo(0,0); render(); });
+
+/* ---------- arranque ---------- */
+if (FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== 'PEGAR_ACA'){
+  MODE = 'live';
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.database(); auth = firebase.auth();
+  db.ref('prime').on('value', s=>{
+    DATA = s.val();
+    // no pisar un formulario del panel que se está editando
+    if (route().a==='admin' && (ADM.edit || ['ligas','planteles','jugadores','tablas'].includes(ADM.tab)) && DATA && document.querySelector('#app .form')) { return; }
+    render();
+  }, err=>{ $('#app').innerHTML = `<h2>No se pudo leer la base</h2><p class="muted">${esc(err.message)}</p>`; });
+  auth.onAuthStateChanged(async u=>{
+    USER = u; IS_ADMIN = false;
+    if (u){ try { IS_ADMIN = (await db.ref('config/admins/'+u.uid).get()).val() === true; } catch(e){ IS_ADMIN = false; } }
+    render();
+  });
+} else {
+  DATA = SEED;
+  render();
+}
+</script>
+</body>
+</html>
