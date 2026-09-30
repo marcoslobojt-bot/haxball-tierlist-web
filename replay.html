@@ -43,6 +43,19 @@ button.rec{border-color:#c62828} button.rec.on{background:#c62828}
 .goles{max-width:1400px;margin:0 auto;padding:0 16px 14px;display:flex;flex-wrap:wrap;gap:6px;color:var(--muted);font-size:.9rem;align-items:center}
 .goles button{padding:3px 9px;font-size:.85rem}
 .hint{color:var(--muted);font-size:.85rem}
+.dl{position:relative}
+.menu{position:absolute;right:0;bottom:44px;z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px;min-width:290px;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+.menu[hidden]{display:none}
+.menu button{display:block;width:100%;text-align:left;border:0;background:none;padding:9px 10px}
+.menu button:hover:not(:disabled){background:var(--panel2)}
+.menu small{display:block;color:var(--muted);font-weight:400}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:10}
+.modal[hidden]{display:none}
+.modal .box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:22px;width:min(460px,92vw)}
+.modal h3{margin:0 0 6px;font-family:'Big Shoulders Display',sans-serif;font-size:1.4rem}
+.prog{height:10px;background:var(--line);border-radius:5px;overflow:hidden;margin:14px 0 8px}
+.prog div{height:100%;width:0;background:var(--silver)}
+.goles .dlg{padding:3px 7px;margin-left:-4px}
 </style>
 </head>
 <body>
@@ -71,15 +84,28 @@ button.rec{border-color:#c62828} button.rec.on{background:#c62828}
     <option value="follow">Cámara del juego</option><option value="full">Cancha completa</option>
   </select>
   <button id="btSound" disabled title="Sonido">🔊</button>
-  <button class="rec" id="btRec" disabled title="Graba lo que se ve y lo descarga como video">● Grabar video</button>
+  <div class="dl"><button id="btDl" disabled>⬇ Descargar</button>
+    <div class="menu" id="menu" hidden>
+      <button id="dlHbr">Repetición (.hbr2)<small>El archivo original, para abrir en HaxBall</small></button>
+      <button id="dlClip">Video de 20 segundos desde acá (MP4)<small>Arranca en el momento que estás viendo</small></button>
+      <button id="dlFull">Video del partido completo (MP4)<small>Tarda varios minutos; podés cancelar</small></button>
+    </div></div>
   <button id="btPdf" hidden>Ver informe</button>
 </div>
 <div class="goles" id="goles"></div>
-<div class="goles hint">Atajos: espacio = play/pausa · ← → = 5 segundos · rueda del mouse = zoom en "Cancha completa". "Grabar video" graba lo que se reproduce: a x1 tarda lo mismo que el partido; a x2 o x4 el video sale acelerado.</div>
+<div class="goles hint">Atajos: espacio = play/pausa · ← → = 5 segundos · rueda del mouse = zoom en "Cancha completa". El ⬇ al lado de cada gol descarga el clip de ese gol en MP4.</div>
+<div class="modal" id="modal" hidden><div class="box">
+  <h3 id="mTitle">Generando video</h3>
+  <div id="mTxt" class="hint">Preparando…</div>
+  <div class="prog"><div id="mBar"></div></div>
+  <div id="mEta" class="hint"></div>
+  <div style="margin-top:14px;text-align:right"><button id="mCancel">Cancelar</button></div>
+</div></div>
 
 <script src="replay/lib/json5.min.js"></script>
 <script src="replay/lib/pako-jszip.min.js"></script>
 <script src="replay/lib/api.js"></script>
+<script src="replay/lib/mp4-muxer.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
@@ -187,7 +213,7 @@ function start(u8){
   scanGoals(u8);
 }
 
-function setControls(on){ ['btPlay','btBack','btFwd','selSpeed','selCam','btSound','btRec'].forEach(id=>$(id).disabled=!on); }
+function setControls(on){ ['btPlay','btBack','btFwd','selSpeed','selCam','btSound','btDl'].forEach(id=>$(id).disabled=!on); }
 function updatePlayBtn(){ $('btPlay').textContent = playing ? '❚❚ Pausa' : '▶ Play'; }
 function togglePlay(){ if(!reader || seeking) return; playing=!playing; reader.setSpeed(playing?speed:0); if (Sound.ctx && Sound.ctx.state==='suspended') Sound.ctx.resume(); updatePlayBtn(); }
 function seekTo(ms){ if(!reader) return; ms=Math.max(0,Math.min(ms,reader.length())); seeking=true; setControls(false); reader.setSpeed(0); reader.setTime(ms); }
@@ -221,7 +247,6 @@ function onFrame(state){
   $('sr').textContent = g.redScore; $('sb').textContent = g.blueScore;
   const te = Math.floor(g.timeElapsed); $('clk').textContent = pad(Math.floor(te/60))+':'+pad(te%60);
   if (needFit && !renderer.followMode) fitStadium();
-  if (rec) drawRecFrame(g);
 }
 
 /* barra de tiempo */
@@ -231,7 +256,7 @@ setInterval(()=>{
   const L = reader.length(), t = reader.getTime(), p = L ? Math.min(1,t/L) : 0;
   $('fill').style.width = (p*100)+'%'; $('knob').style.left = (p*100)+'%';
   $('time').textContent = mmss(t)+' / '+mmss(L);
-  if (playing && t>=L-50){ playing=false; updatePlayBtn(); if(rec) stopRec(); }
+  if (playing && t>=L-50){ playing=false; updatePlayBtn(); }
 }, 150);
 let dragging=false;
 function trackPos(e){ const r=track.getBoundingClientRect(); return Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); }
@@ -265,54 +290,120 @@ function scanGoals(u8){
 function pintarGoles(goles, L){
   const box = $('goles'), marks = $('marks');
   marks.innerHTML = goles.map(g=>`<div class="gol ${g.rojo?'r':'b'}" style="left:${g.t/L*100}%" data-ms="${g.t}" data-t="${g.tiempo}T ${pad(Math.floor(g.reloj/60))}:${pad(g.reloj%60)} · ${g.sc}"></div>`).join('');
-  box.innerHTML = goles.length ? '<span>Goles:</span>' + goles.map(g=>`<button data-ms="${g.t}"><span style="color:${g.rojo?'var(--red)':'var(--blue)'}">●</span> ${g.tiempo}T ${pad(Math.floor(g.reloj/60))}:${pad(g.reloj%60)} · ${g.sc}</button>`).join('') : '<span>No se encontraron goles.</span>';
+  box.innerHTML = goles.length ? '<span>Goles:</span>' + goles.map(g=>`<button data-ms="${g.t}"><span style="color:${g.rojo?'var(--red)':'var(--blue)'}">●</span> ${g.tiempo}T ${pad(Math.floor(g.reloj/60))}:${pad(g.reloj%60)} · ${g.sc}</button><button class="dlg" title="Descargar el clip de este gol" data-clip="${g.t}" data-name="gol_${g.tiempo}T_${pad(Math.floor(g.reloj/60))}m${pad(g.reloj%60)}s_${g.sc}">⬇</button>`).join('') : '<span>No se encontraron goles.</span>';
   const go = ms => { seekTo(Math.max(0, ms-6000)); if(!playing) togglePlayAfterSeek(); };
-  box.querySelectorAll('button').forEach(b=>b.onclick=()=>go(+b.dataset.ms));
+  box.querySelectorAll('button[data-ms]').forEach(b=>b.onclick=()=>go(+b.dataset.ms));
+  box.querySelectorAll('button[data-clip]').forEach(b=>b.onclick=()=>exportVideo(Math.max(0,+b.dataset.clip-8000), +b.dataset.clip+5000, b.dataset.name));
   marks.querySelectorAll('.gol').forEach(m=>m.onclick=()=>go(+m.dataset.ms));
 }
 function togglePlayAfterSeek(){ playing = true; updatePlayBtn(); }
 
-/* ---------- grabación ---------- */
-let rec = null, recCv = null, recCtx = null, chunks = [];
-function pickMime(){
-  for (const m of ['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'])
-    if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
-  return '';
+/* ---------- descargas ---------- */
+$('btDl').onclick = e=>{ e.stopPropagation(); $('menu').hidden = !$('menu').hidden; };
+document.addEventListener('click', e=>{ if(!e.target.closest('.dl')) $('menu').hidden = true; });
+$('dlHbr').onclick = ()=>{ $('menu').hidden = true; if(!bytes) return;
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'})); a.download=fileName+'.hbr2';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); };
+$('dlClip').onclick = ()=>{ $('menu').hidden = true; const t=reader.getTime(); exportVideo(t, t+20000, fileName+'_'+mmss(t).replace(':','m')+'s'); };
+$('dlFull').onclick = ()=>{ $('menu').hidden = true; exportVideo(0, reader.length(), fileName+'_completo'); };
+
+let exporting = null;
+$('mCancel').onclick = ()=>{ if (exporting) exporting.cancel = true; };
+
+async function pickCodec(w,h,fps){
+  for (const codec of ['avc1.640028','avc1.4d0028','avc1.42002a','avc1.42001f']){
+    try{ const c={codec,width:w,height:h,bitrate:5e6,framerate:fps}; const r=await VideoEncoder.isConfigSupported(c); if(r.supported) return c; }catch(e){}
+  }
+  return null;
 }
-function drawRecFrame(g){
-  if (!recCtx) return;
-  recCtx.drawImage(cv, 0, 0, recCv.width, recCv.height);
-  const W = recCv.width, s = W/1280;
-  recCtx.fillStyle='rgba(0,0,0,.55)'; recCtx.fillRect(W/2-150*s,8*s,300*s,38*s);
-  recCtx.fillStyle='#e56e56'; recCtx.fillRect(W/2-138*s,17*s,20*s,20*s);
-  recCtx.fillStyle='#5689e5'; recCtx.fillRect(W/2+118*s,17*s,20*s,20*s);
-  recCtx.fillStyle='#fff'; recCtx.font=`700 ${22*s}px 'Barlow Semi Condensed',sans-serif`; recCtx.textAlign='center'; recCtx.textBaseline='middle';
-  const te=Math.floor(g.timeElapsed);
-  recCtx.fillText(`${g.redScore} - ${g.blueScore}`, W/2-40*s, 28*s);
-  recCtx.fillText(`${pad(Math.floor(te/60))}:${pad(te%60)}`, W/2+60*s, 28*s);
+function drawScore(ctx,W,g){
+  const s=W/1280, te=Math.floor(g.timeElapsed);
+  ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(W/2-150*s,8*s,300*s,38*s);
+  ctx.fillStyle='#e56e56'; ctx.fillRect(W/2-138*s,17*s,20*s,20*s);
+  ctx.fillStyle='#5689e5'; ctx.fillRect(W/2+118*s,17*s,20*s,20*s);
+  ctx.fillStyle='#fff'; ctx.font=`700 ${22*s}px 'Barlow Semi Condensed',sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(`${g.redScore} - ${g.blueScore}`, W/2-40*s, 28*s);
+  ctx.fillText(`${pad(Math.floor(te/60))}:${pad(te%60)}`, W/2+60*s, 28*s);
 }
-function startRec(){
-  const mime = pickMime();
-  if (!mime || !recSupported()) return alert('Este navegador no permite grabar video. Probá con Chrome o Edge en la compu.');
-  recCv = document.createElement('canvas'); recCv.width = 1280; recCv.height = 720; recCtx = recCv.getContext('2d');
-  chunks = [];
-  const stream = recCv.captureStream(60);
-  rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6e6 });
-  rec.ondataavailable = e=>{ if(e.data.size) chunks.push(e.data); };
-  rec.onstop = ()=>{
-    const ext = mime.includes('mp4') ? 'mp4' : 'webm';
-    const blob = new Blob(chunks, { type: mime.split(';')[0] });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${fileName}_${mmss(reader.getTime()).replace(':','m')}s.${ext}`;
-    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 10000);
-    rec = null; recCtx = null; $('btRec').classList.remove('on'); $('btRec').textContent='● Grabar video';
+
+/* Renderiza cuadro por cuadro con el renderer original, en un lienzo aparte, y arma el MP4 con WebCodecs.
+   No depende del tiempo real: sale fluido aunque la compu sea lenta. */
+async function exportVideo(from, to, name){
+  if (exporting || !bytes) return;
+  if (!window.VideoEncoder || !window.Mp4Muxer) return alert('Este navegador no puede generar video. Usá Chrome o Edge actualizados en la compu.');
+  const W=1280, H=720, FPS=30;
+  const cfg = await pickCodec(W,H,FPS);
+  if (!cfg) return alert('Este navegador no tiene un codificador de video compatible. Probá con Chrome o Edge.');
+  to = Math.min(to, reader.length()); from = Math.max(0, from);
+  const total = Math.max(1, Math.round((to-from)/1000*FPS));
+  const job = exporting = { cancel:false };
+  const wasPlaying = playing; if (playing) togglePlay();
+  $('modal').hidden=false; $('mTitle').textContent = total>FPS*60 ? 'Generando el video del partido' : 'Generando el clip';
+  $('mTxt').textContent='Preparando…'; $('mBar').style.width='0'; $('mEta').textContent='';
+
+  // lienzos y renderer propios
+  const gameCv=document.createElement('canvas'); gameCv.width=W; gameCv.height=H;
+  const outCv=document.createElement('canvas'); outCv.width=W; outCv.height=H; const octx=outCv.getContext('2d');
+  const R = await loadRenderer();
+  const imgs = await Promise.all(['grass','concrete','concrete2','typing'].map(n=>loadImage('replay/img/'+n+'.png')));
+  const rend = new R(API, { canvas: gameCv, images:{grass:imgs[0],concrete:imgs[1],concrete2:imgs[2],typing:imgs[3]}, paintGame:true });
+  rend.followMode = renderer.followMode; rend.zoomCoeff = 1;
+  if (!rend.followMode){ rend.restrictCameraOrigin=false; }
+  const r2 = API.Replay.read(bytes, {}); r2.setSpeed(0);
+  rend.room = r2; rend.initialize(r2);
+
+  // reloj falso para que la cámara se mueva igual que en el juego
+  const realNow = performance.now.bind(performance); let fake = realNow();
+  const restoreNow = ()=>{ try{ delete performance.now; }catch(e){} };
+  try{ Object.defineProperty(performance,'now',{value:()=>fake,configurable:true,writable:true}); }catch(e){}
+
+  const muxer = new Mp4Muxer.Muxer({ target:new Mp4Muxer.ArrayBufferTarget(), video:{codec:'avc',width:W,height:H,frameRate:FPS}, fastStart:'in-memory' });
+  let encErr=null;
+  const enc = new VideoEncoder({ output:(chunk,meta)=>muxer.addVideoChunk(chunk,meta), error:e=>{ encErr=e; } });
+  enc.configure(cfg);
+
+  const t0 = realNow(); let n=0, first=true;
+  const finish = async (ok)=>{
+    restoreNow();
+    try{ r2.destroy(); }catch(e){}
+    if (ok){
+      $('mTxt').textContent='Terminando el archivo…';
+      await enc.flush(); muxer.finalize();
+      const blob=new Blob([muxer.target.buffer],{type:'video/mp4'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name+'.mp4';
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),20000);
+    } else { try{ enc.close(); }catch(e){} }
+    exporting=null; $('modal').hidden=true;
+    if (wasPlaying && !playing) togglePlay();
   };
-  rec.start(1000);
-  $('btRec').classList.add('on'); $('btRec').textContent='■ Terminar y descargar';
-  if (!playing) togglePlay();
+  await new Promise(resolve=>{
+    let t = from;
+    r2.onDestinationTimeReached = async ()=>{
+      if (job.cancel || encErr){ await finish(false); if(encErr) alert('Error al codificar el video: '+encErr.message); return resolve(); }
+      const g = r2.gameState;
+      if (g){
+        if (first && rend.followMode){ const b=g.physicsState.discs[0].pos; rend.setOrigin({x:b.x,y:b.y}); }
+        if (first && !rend.followMode){ const st=g.stadium; rend.zoomCoeff=Math.min(W/(2*st.width),H/(2*st.height))*0.98/(window.devicePixelRatio||1); rend.setOrigin({x:0,y:0}); }
+        first=false;
+        fake += 1000/FPS; rend.render();
+        octx.drawImage(gameCv,0,0); drawScore(octx,W,g);
+      } else { octx.fillStyle='#000'; octx.fillRect(0,0,W,H); }
+      const frame = new VideoFrame(outCv,{timestamp: Math.round(n*1e6/FPS), duration: Math.round(1e6/FPS)});
+      enc.encode(frame,{keyFrame: n%(FPS*2)===0}); frame.close(); n++;
+      while (enc.encodeQueueSize>8) await new Promise(r=>setTimeout(r,5));
+      if (n%15===0){
+        const p=n/total, el=(realNow()-t0)/1000, eta=p>0.02? el/p-el : null;
+        $('mBar').style.width=(p*100).toFixed(1)+'%';
+        $('mTxt').textContent=`Cuadro ${n} de ${total}`;
+        $('mEta').textContent = eta!=null ? `Falta aproximadamente ${eta>90? Math.round(eta/60)+' min' : Math.round(eta)+' s'}` : '';
+      }
+      t += 1000/FPS;
+      if (n>=total){ await finish(true); return resolve(); }
+      r2.setTime(t);
+    };
+    r2.setTime(t);
+  });
 }
-function recSupported(){ return !!(HTMLCanvasElement.prototype.captureStream && window.MediaRecorder); }
-function stopRec(){ if (rec && rec.state!=='inactive') rec.stop(); }
-$('btRec').onclick = ()=>{ rec ? stopRec() : startRec(); };
 
 window.addEventListener('load', boot);
 </script>
