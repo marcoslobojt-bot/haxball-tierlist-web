@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repetición · Prime Hax</title>
+<link rel="icon" href="assets/prime.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800&family=Barlow+Semi+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#000;--panel:#15181C;--panel2:#1D2127;--line:#2B3038;--silver:#C9CED6;--text:#EEF0F3;--muted:#8C949E;--gold:#b8912f;--red:#e56e56;--blue:#5689e5}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:400 16px/1.4 'Barlow Semi Condensed',system-ui,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line)}
+header img{width:34px;height:34px}
+header a.back{color:var(--muted);text-decoration:none;margin-left:auto;font-weight:600}
+header a.back:hover{color:var(--text)}
+#titulo{font-family:'Big Shoulders Display',sans-serif;font-size:1.5rem;letter-spacing:.02em}
+#sub{color:var(--muted);font-size:.95rem}
+.stage{position:relative;width:100%;max-width:1400px;margin:0 auto;aspect-ratio:16/9;max-height:calc(100vh - 190px);background:#111}
+.stage canvas{width:100%;height:100%;display:block}
+.score{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.55);padding:5px 14px;border-radius:4px;font-weight:700;font-size:1.25rem;pointer-events:none}
+.score i{width:18px;height:18px;display:inline-block}
+.score .r{background:var(--red)} .score .b{background:var(--blue)}
+.score .clock{margin-left:14px;font-variant-numeric:tabular-nums}
+.msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center;padding:20px;background:rgba(0,0,0,.7)}
+.msg[hidden]{display:none}
+.bar{max-width:1400px;margin:0 auto;padding:10px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+button,select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px 12px;font:600 15px 'Barlow Semi Condensed',sans-serif;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--silver)}
+button:disabled{opacity:.45;cursor:default}
+button.main{background:var(--silver);color:#000;border-color:var(--silver);min-width:92px}
+button.rec{border-color:#c62828} button.rec.on{background:#c62828}
+.time{font-variant-numeric:tabular-nums;color:var(--muted);min-width:110px}
+.track{position:relative;flex:1 1 300px;height:34px;cursor:pointer;touch-action:none}
+.track .rail{position:absolute;left:0;right:0;top:15px;height:5px;background:var(--line);border-radius:3px}
+.track .fill{position:absolute;left:0;top:15px;height:5px;background:var(--silver);border-radius:3px}
+.track .knob{position:absolute;top:9px;width:17px;height:17px;margin-left:-8px;border-radius:50%;background:#fff}
+.track .gol{position:absolute;top:2px;width:12px;height:12px;margin-left:-6px;border-radius:50%;border:2px solid #000;cursor:pointer}
+.track .gol.r{background:var(--red)} .track .gol.b{background:var(--blue)}
+.track .gol:hover::after{content:attr(data-t);position:absolute;bottom:16px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#000;padding:2px 6px;border-radius:4px;font-size:.8rem;border:1px solid var(--line)}
+.goles{max-width:1400px;margin:0 auto;padding:0 16px 14px;display:flex;flex-wrap:wrap;gap:6px;color:var(--muted);font-size:.9rem;align-items:center}
+.goles button{padding:3px 9px;font-size:.85rem}
+.hint{color:var(--muted);font-size:.85rem}
+</style>
+</head>
+<body>
+<header>
+  <img src="assets/prime.png" alt="">
+  <div><div id="titulo">Repetición</div><div id="sub">Prime Hax</div></div>
+  <a class="back" href="./">← Volver al sitio</a>
+</header>
+
+<div class="stage" id="stage">
+  <canvas id="cv"></canvas>
+  <div class="score" id="score" hidden><i class="r"></i><span id="sr">0</span>-<span id="sb">0</span><i class="b"></i><span class="clock" id="clk">00:00</span></div>
+  <div class="msg" id="msg"><div id="msgTxt">Cargando…</div><button id="btFile" hidden>Abrir un archivo .hbr2</button></div>
+</div>
+
+<div class="bar">
+  <button class="main" id="btPlay" disabled>▶ Play</button>
+  <button id="btBack" disabled title="Atrás 5 s (←)">⟲ 5 s</button>
+  <button id="btFwd" disabled title="Adelante 5 s (→)">5 s ⟳</button>
+  <select id="selSpeed" disabled title="Velocidad">
+    <option value="0.5">x0,5</option><option value="1" selected>x1</option><option value="2">x2</option><option value="4">x4</option><option value="8">x8</option>
+  </select>
+  <div class="track" id="track"><div class="rail"></div><div class="fill" id="fill"></div><div id="marks"></div><div class="knob" id="knob"></div></div>
+  <span class="time" id="time">00:00 / 00:00</span>
+  <select id="selCam" disabled title="Cámara">
+    <option value="follow">Cámara del juego</option><option value="full">Cancha completa</option>
+  </select>
+  <button id="btSound" disabled title="Sonido">🔊</button>
+  <button class="rec" id="btRec" disabled title="Graba lo que se ve y lo descarga como video">● Grabar video</button>
+  <button id="btPdf" hidden>Ver informe</button>
+</div>
+<div class="goles" id="goles"></div>
+<div class="goles hint">Atajos: espacio = play/pausa · ← → = 5 segundos · rueda del mouse = zoom en "Cancha completa". "Grabar video" graba lo que se reproduce: a x1 tarda lo mismo que el partido; a x2 o x4 el video sale acelerado.</div>
+
+<script src="replay/lib/json5.min.js"></script>
+<script src="replay/lib/pako-jszip.min.js"></script>
+<script src="replay/lib/api.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* Visor de repeticiones de Prime Hax.
+   Dibuja con el renderer original de HaxBall (basro) incluido en node-haxball (licencia MIT). */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCoYMARaxZGE2pEwsSgbJRgv7NGn0Gln0A",
+  authDomain: "haxball-tier.firebaseapp.com",
+  databaseURL: "https://haxball-tier-default-rtdb.firebaseio.com",
+  projectId: "haxball-tier",
+  storageBucket: "haxball-tier.firebasestorage.app",
+  messagingSenderId: "593797428721",
+  appId: "1:593797428721:web:b1c10c6f073f328939c050"
+};
+const $ = s => document.getElementById(s);
+const pad = n => String(n).padStart(2,'0');
+const mmss = ms => { const s = Math.max(0, Math.floor(ms/1000)); return pad(Math.floor(s/60))+':'+pad(s%60); };
+const cv = $('cv');
+let API, renderer, reader = null, bytes = null, speed = 1, playing = false, seeking = false, soundOn = true, fileName = 'repeticion';
+let partido = null, partidoId = new URLSearchParams(location.search).get('id');
+
+/* ---------- utilidades ---------- */
+function msg(txt, showFile){ $('msg').hidden = !txt; $('msgTxt').textContent = txt||''; $('btFile').hidden = !showFile; }
+function loadImage(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
+function loadRenderer(){ // el renderer está escrito como módulo CommonJS: lo cargamos con un "module" temporal
+  return new Promise((res,rej)=>{ window.module = {}; const s=document.createElement('script'); s.src='replay/lib/defaultRenderer.js';
+    s.onload=()=>{ const R=window.module.exports; window.module=undefined; R?res(R):rej(new Error('renderer')); }; s.onerror=rej; document.body.appendChild(s); });
+}
+const Sound = {
+  ctx:null, buf:{},
+  async init(){ try{ this.ctx = new AudioContext(); for (const n of ['kick','goal']){ const r = await fetch('replay/snd/'+n+'.ogg'); this.buf[n] = await this.ctx.decodeAudioData(await r.arrayBuffer()); } }catch(e){ console.warn('sin sonido', e); } },
+  play(n){ if(!soundOn || !this.ctx || !this.buf[n] || seeking || !playing) return; if(this.ctx.state==='suspended') this.ctx.resume(); const s=this.ctx.createBufferSource(); s.buffer=this.buf[n]; const g=this.ctx.createGain(); g.gain.value=.6; s.connect(g); g.connect(this.ctx.destination); s.start(); }
+};
+
+/* ---------- carga ---------- */
+async function boot(){
+  try{
+    API = abcHaxballAPI(window, { noVariableValueChangeEvent: true });
+    const R = await loadRenderer();
+    const imgs = await Promise.all(['grass','concrete','concrete2','typing'].map(n=>loadImage('replay/img/'+n+'.png')));
+    renderer = new R(API, { canvas: cv, images:{grass:imgs[0],concrete:imgs[1],concrete2:imgs[2],typing:imgs[3]}, paintGame:true, onRequestAnimationFrame: onFrame });
+    renderer.followMode = true;
+    Sound.init();
+  }catch(e){ console.error(e); return msg('No se pudo iniciar el visor. Probá recargar la página.'); }
+  if (partidoId) loadFromFirebase(partidoId);
+  else msg('Elegí un archivo .hbr2 para verlo.', true);
+}
+
+async function loadFromFirebase(id){
+  try{
+    msg('Descargando la repetición…');
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const db = firebase.database();
+    const [pSnap, rSnap] = await Promise.all([db.ref('prime/partidos/'+id).get(), db.ref('replays/'+id).get()]);
+    partido = pSnap.val();
+    const v = rSnap.val();
+    if (partido){
+      const loc = partido.condicion !== 'visitante';
+      $('titulo').textContent = loc ? `Prime Hax vs ${partido.rival}` : `${partido.rival} vs Prime Hax`;
+      const f = partido.fecha ? partido.fecha.split('-').reverse().join('/') : '';
+      $('sub').textContent = [partido.jornada?`Fecha ${partido.jornada}`:'', f, partido.gp!=null?`Resultado ${partido.gp}–${partido.gr}${partido.tipo?' ('+partido.tipo+')':''}`:''].filter(Boolean).join(' · ');
+      document.title = $('titulo').textContent + ' · Repetición';
+      if (partido.informe){ $('btPdf').hidden = false; $('btPdf').onclick = ()=>verInforme(db, id); }
+    }
+    if (!v) return msg('Este partido no tiene repetición cargada.', true);
+    fileName = (v.name||'repeticion').replace(/\.hbr2?$/i,'');
+    const bin = atob(v.data), u8 = new Uint8Array(bin.length);
+    for (let i=0;i<bin.length;i++) u8[i] = bin.charCodeAt(i);
+    start(u8);
+  }catch(e){ console.error(e); msg('No se pudo descargar la repetición ('+(e.message||e)+').', true); }
+}
+
+async function verInforme(db, id){
+  const w = window.open('', '_blank');
+  try{
+    const v = (await db.ref('informes/'+id).get()).val(); if (!v) throw new Error('sin informe');
+    const bin = atob(v.data), u8 = new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([u8],{type:'application/pdf'}));
+    if (w) w.location.href = url; else location.href = url;
+  }catch(e){ if (w) w.close(); alert('No se pudo abrir el informe.'); }
+}
+
+$('btFile').onclick = ()=>{ const i=document.createElement('input'); i.type='file'; i.accept='.hbr2,.hbr';
+  i.onchange=()=>{ const f=i.files[0]; if(!f) return; fileName=f.name.replace(/\.hbr2?$/i,''); $('titulo').textContent=f.name; $('sub').textContent='Archivo local';
+    f.arrayBuffer().then(b=>start(new Uint8Array(b))); }; i.click(); };
+
+/* ---------- reproducción ---------- */
+function start(u8){
+  bytes = u8;
+  try{
+    if (reader){ try{ reader.destroy(); }catch(e){} }
+    reader = API.Replay.read(u8, {
+      onPlayerBallKick: ()=>Sound.play('kick'),
+      onTeamGoal: (t,g,go,bi,bd)=>{ Sound.play('goal'); renderer.onTeamGoal(t,g,go,bi,bd); },
+      onGameStart: (b)=>renderer.onGameStart(b),
+      onGameEnd: (w)=>renderer.onGameEnd(w),
+      onTimeIsUp: ()=>renderer.onTimeIsUp(),
+      render: renderer.render
+    });
+  }catch(e){ console.error(e); return msg('El archivo no es una repetición válida de HaxBall (.hbr2).', true); }
+  reader.onDestinationTimeReached = ()=>{ seeking = false; setControls(true); if (playing) reader.setSpeed(speed); };
+  renderer.room = reader; renderer.initialize(reader);
+  reader.setSpeed(0); playing = false;
+  msg(''); $('score').hidden = false; setControls(true); updatePlayBtn();
+  scanGoals(u8);
+}
+
+function setControls(on){ ['btPlay','btBack','btFwd','selSpeed','selCam','btSound','btRec'].forEach(id=>$(id).disabled=!on); }
+function updatePlayBtn(){ $('btPlay').textContent = playing ? '❚❚ Pausa' : '▶ Play'; }
+function togglePlay(){ if(!reader || seeking) return; playing=!playing; reader.setSpeed(playing?speed:0); if (Sound.ctx && Sound.ctx.state==='suspended') Sound.ctx.resume(); updatePlayBtn(); }
+function seekTo(ms){ if(!reader) return; ms=Math.max(0,Math.min(ms,reader.length())); seeking=true; setControls(false); reader.setSpeed(0); reader.setTime(ms); }
+
+$('btPlay').onclick = togglePlay;
+$('btBack').onclick = ()=>seekTo(reader.getTime()-5000);
+$('btFwd').onclick = ()=>seekTo(reader.getTime()+5000);
+$('selSpeed').onchange = e=>{ speed=parseFloat(e.target.value); if(playing) reader.setSpeed(speed); };
+$('selCam').onchange = e=>{ renderer.followMode = e.target.value==='follow'; if(renderer.followMode){ renderer.zoomCoeff=1; renderer.restrictCameraOrigin=true; } else { renderer.restrictCameraOrigin=false; renderer.setOrigin({x:0,y:0}); fitStadium(); } };
+$('btSound').onclick = ()=>{ soundOn=!soundOn; $('btSound').textContent = soundOn?'🔊':'🔇'; };
+cv.addEventListener('wheel', e=>{ if(renderer && !renderer.followMode){ e.preventDefault(); renderer.onWheel(e); } }, {passive:false});
+document.addEventListener('keydown', e=>{
+  if (!reader || e.target.tagName==='SELECT') return;
+  if (e.code==='Space'){ e.preventDefault(); togglePlay(); }
+  else if (e.code==='ArrowLeft') seekTo(reader.getTime()-5000);
+  else if (e.code==='ArrowRight') seekTo(reader.getTime()+5000);
+});
+
+function fitStadium(){
+  const g = reader && reader.gameState; if(!g){ needFit = true; return; }
+  const st = g.stadium, r = cv.getBoundingClientRect();
+  renderer.zoomCoeff = Math.min(r.width/(2*st.width), r.height/(2*st.height)) * 0.98;
+  needFit = false;
+}
+
+/* marcador y reloj, se actualizan en cada cuadro dibujado */
+let needFit = false;
+window.addEventListener('resize', ()=>{ if(renderer && !renderer.followMode) fitStadium(); });
+function onFrame(state){
+  const g = state.gameState; if(!g) return;
+  $('sr').textContent = g.redScore; $('sb').textContent = g.blueScore;
+  const te = Math.floor(g.timeElapsed); $('clk').textContent = pad(Math.floor(te/60))+':'+pad(te%60);
+  if (needFit && !renderer.followMode) fitStadium();
+  if (rec) drawRecFrame(g);
+}
+
+/* barra de tiempo */
+const track = $('track');
+setInterval(()=>{
+  if(!reader) return;
+  const L = reader.length(), t = reader.getTime(), p = L ? Math.min(1,t/L) : 0;
+  $('fill').style.width = (p*100)+'%'; $('knob').style.left = (p*100)+'%';
+  $('time').textContent = mmss(t)+' / '+mmss(L);
+  if (playing && t>=L-50){ playing=false; updatePlayBtn(); if(rec) stopRec(); }
+}, 150);
+let dragging=false;
+function trackPos(e){ const r=track.getBoundingClientRect(); return Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); }
+track.addEventListener('pointerdown', e=>{ if(!reader||seeking||e.target.classList.contains('gol')) return; dragging=true; track.setPointerCapture(e.pointerId); });
+track.addEventListener('pointermove', e=>{ if(dragging){ const p=trackPos(e); $('fill').style.width=(p*100)+'%'; $('knob').style.left=(p*100)+'%'; } });
+track.addEventListener('pointerup', e=>{ if(dragging){ dragging=false; seekTo(trackPos(e)*reader.length()); } });
+
+/* ---------- goles: se buscan en segundo plano con un segundo lector ---------- */
+function scanGoals(u8){
+  const box = $('goles'); box.innerHTML = '<span>Buscando goles…</span>';
+  let r2; try{ r2 = API.Replay.read(u8, {}); r2.setSpeed(0); }catch(e){ box.innerHTML=''; return; }
+  const L = r2.length(), STEP = 2000, goles = []; let t = 0, prev = null, lastEl = 0, tiempo = 1;
+  r2.onDestinationTimeReached = ()=>{
+    const g = r2.gameState;
+    if (g){
+      if (g.timeElapsed < lastEl-5) tiempo++;
+      lastEl = g.timeElapsed;
+      const sc = g.redScore+'-'+g.blueScore;
+      if (prev!==null && sc!==prev && sc!=='0-0'){
+        const rojo = g.redScore > +prev.split('-')[0];
+        goles.push({ t: Math.max(0,t-STEP), sc, rojo, reloj: Math.floor(g.timeElapsed), tiempo });
+      }
+      prev = sc;
+    } else prev = null;
+    t += STEP;
+    if (t > L){ try{ r2.destroy(); }catch(e){} return pintarGoles(goles, L); }
+    r2.setTime(t);
+  };
+  r2.setTime(0);
+}
+function pintarGoles(goles, L){
+  const box = $('goles'), marks = $('marks');
+  marks.innerHTML = goles.map(g=>`<div class="gol ${g.rojo?'r':'b'}" style="left:${g.t/L*100}%" data-ms="${g.t}" data-t="${g.tiempo}T ${pad(Math.floor(g.reloj/60))}:${pad(g.reloj%60)} · ${g.sc}"></div>`).join('');
+  box.innerHTML = goles.length ? '<span>Goles:</span>' + goles.map(g=>`<button data-ms="${g.t}"><span style="color:${g.rojo?'var(--red)':'var(--blue)'}">●</span> ${g.tiempo}T ${pad(Math.floor(g.reloj/60))}:${pad(g.reloj%60)} · ${g.sc}</button>`).join('') : '<span>No se encontraron goles.</span>';
+  const go = ms => { seekTo(Math.max(0, ms-6000)); if(!playing) togglePlayAfterSeek(); };
+  box.querySelectorAll('button').forEach(b=>b.onclick=()=>go(+b.dataset.ms));
+  marks.querySelectorAll('.gol').forEach(m=>m.onclick=()=>go(+m.dataset.ms));
+}
+function togglePlayAfterSeek(){ playing = true; updatePlayBtn(); }
+
+/* ---------- grabación ---------- */
+let rec = null, recCv = null, recCtx = null, chunks = [];
+function pickMime(){
+  for (const m of ['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'])
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
+  return '';
+}
+function drawRecFrame(g){
+  if (!recCtx) return;
+  recCtx.drawImage(cv, 0, 0, recCv.width, recCv.height);
+  const W = recCv.width, s = W/1280;
+  recCtx.fillStyle='rgba(0,0,0,.55)'; recCtx.fillRect(W/2-150*s,8*s,300*s,38*s);
+  recCtx.fillStyle='#e56e56'; recCtx.fillRect(W/2-138*s,17*s,20*s,20*s);
+  recCtx.fillStyle='#5689e5'; recCtx.fillRect(W/2+118*s,17*s,20*s,20*s);
+  recCtx.fillStyle='#fff'; recCtx.font=`700 ${22*s}px 'Barlow Semi Condensed',sans-serif`; recCtx.textAlign='center'; recCtx.textBaseline='middle';
+  const te=Math.floor(g.timeElapsed);
+  recCtx.fillText(`${g.redScore} - ${g.blueScore}`, W/2-40*s, 28*s);
+  recCtx.fillText(`${pad(Math.floor(te/60))}:${pad(te%60)}`, W/2+60*s, 28*s);
+}
+function startRec(){
+  const mime = pickMime();
+  if (!mime || !recSupported()) return alert('Este navegador no permite grabar video. Probá con Chrome o Edge en la compu.');
+  recCv = document.createElement('canvas'); recCv.width = 1280; recCv.height = 720; recCtx = recCv.getContext('2d');
+  chunks = [];
+  const stream = recCv.captureStream(60);
+  rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6e6 });
+  rec.ondataavailable = e=>{ if(e.data.size) chunks.push(e.data); };
+  rec.onstop = ()=>{
+    const ext = mime.includes('mp4') ? 'mp4' : 'webm';
+    const blob = new Blob(chunks, { type: mime.split(';')[0] });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${fileName}_${mmss(reader.getTime()).replace(':','m')}s.${ext}`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 10000);
+    rec = null; recCtx = null; $('btRec').classList.remove('on'); $('btRec').textContent='● Grabar video';
+  };
+  rec.start(1000);
+  $('btRec').classList.add('on'); $('btRec').textContent='■ Terminar y descargar';
+  if (!playing) togglePlay();
+}
+function recSupported(){ return !!(HTMLCanvasElement.prototype.captureStream && window.MediaRecorder); }
+function stopRec(){ if (rec && rec.state!=='inactive') rec.stop(); }
+$('btRec').onclick = ()=>{ rec ? stopRec() : startRec(); };
+
+window.addEventListener('load', boot);
+</script>
+</body>
+</html>

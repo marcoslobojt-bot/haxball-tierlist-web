@@ -438,7 +438,7 @@ function cardPartido(p, full=true){
     if (full && (t.g||t.a)) extra += `<div class="extra">${t.g?`Goles: ${esc(t.g)}`:''}${t.g&&t.a?'<br>':''}${t.a?`Asistencias: ${esc(t.a)}`:''}</div>`;
     if (full && p.nota) extra += `<div class="extra muted">${esc(p.nota)}</div>`;
     if (full && p.informe) extra += `<div class="btns"><button class="btn sm" data-informe="${esc(p.id)}">Ver informe del partido</button><button class="btn sm ghost" data-informe-dl="${esc(p.id)}">Descargar PDF</button></div>`;
-    if (full && p.replay) extra += `<div class="btns"><button class="btn sm ghost" data-replay="${esc(p.id)}">Descargar repetición</button><a class="muted" style="align-self:center" href="https://www.haxball.com/replay" target="_blank" rel="noopener">Se mira en haxball.com/replay</a></div>`;
+    if (full && p.replay) extra += `<div class="btns"><a class="btn sm" href="replay.html?id=${encodeURIComponent(p.id)}">▶ Ver repetición</a><button class="btn sm ghost" data-replay="${esc(p.id)}">Descargar .hbr2</button></div>`;
   } else {
     const c = cierreFirma(p);
     extra += firmaMin(p) ? `<div class="extra">Firmas hasta las <b>${hm(c)}</b> <span class="muted" data-cd="${c.getTime()}"></span></div>`
