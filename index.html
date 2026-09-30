@@ -170,7 +170,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--silver)}
 .adm-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--liga);border-radius:8px}
 .grid-pl{display:grid;grid-template-columns:1.3fr 1fr .8fr 1.2fr;gap:6px 10px;align-items:center}
 .grid-pl .h{color:var(--muted);font-weight:600;font-size:.9rem}
-.chk-row{display:grid;grid-template-columns:1fr 50px 50px 70px 70px;gap:6px;align-items:center}
+.chk-row{display:grid;grid-template-columns:1fr 70px 70px;gap:6px;align-items:center}
 .chk-row input[type=number]{padding:5px 8px}
 .tabla td.l,.tabla th.l{text-align:left}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--silver);color:#000;padding:10px 18px;border-radius:8px;font-weight:600;z-index:50}
@@ -437,7 +437,6 @@ function cardPartido(p, full=true){
     const t = statsTxt(p);
     if (full && (t.g||t.a)) extra += `<div class="extra">${t.g?`Goles: ${esc(t.g)}`:''}${t.g&&t.a?'<br>':''}${t.a?`Asistencias: ${esc(t.a)}`:''}</div>`;
     if (full && p.nota) extra += `<div class="extra muted">${esc(p.nota)}</div>`;
-    if (full) extra += checklist(p);
     if (full && p.informe) extra += `<div class="btns"><button class="btn sm" data-informe="${esc(p.id)}">Ver informe del partido</button><button class="btn sm ghost" data-informe-dl="${esc(p.id)}">Descargar PDF</button></div>`;
     if (full && p.replay) extra += `<div class="btns"><button class="btn sm ghost" data-replay="${esc(p.id)}">Descargar repetición</button><a class="muted" style="align-self:center" href="https://www.haxball.com/replay" target="_blank" rel="noopener">Se mira en haxball.com/replay</a></div>`;
   } else {
@@ -450,22 +449,11 @@ function cardPartido(p, full=true){
     if (lf?.firmaUrl) links.push(`<a class="btn sm" href="${esc(lf.firmaUrl)}" target="_blank" rel="noopener">Firmar</a>`);
     if (p.ssUrl) links.push(`<a class="btn sm ghost" href="${esc(p.ssUrl)}" target="_blank" rel="noopener">Mandar SS</a>`);
     if (full && links.length) extra += `<div class="btns">${links.join('')}</div>`;
-    if (full) extra += checklist(p);
   }
   return `<article class="partido ${r?'r-'+r:''}" style="--liga:${esc(l.color)}">
     <div class="meta">${meta}</div>
     <div class="enf"><span class="eq ${A===US?'nos':''}">${esc(A)}</span>${centro}<span class="eq ${B===US?'nos':''}">${esc(B)}</span></div>
     ${extra}</article>`;
-}
-
-function checklist(p){
-  const l = liga(p.liga); if (!l) return '';
-  const ins = plantel(l).filter(j=>j.estado==='inscripto');
-  if (!ins.length) return '';
-  const fi = p.firmas||{}, ss = p.ss||{};
-  const nf = ins.filter(j=>fi[j.id]).length, ns = ins.filter(j=>ss[j.id]).length;
-  const filas = ins.map(j=>`<div>${esc(j.nombre)}: <span class="${fi[j.id]?'si':'no'}">${fi[j.id]?'firmó':'sin firma'}</span>, <span class="${ss[j.id]?'si':'no'}">${ss[j.id]?'SS ok':'sin SS'}</span></div>`).join('');
-  return `<details><summary>Firmaron ${nf} y mandaron SS ${ns} de ${ins.length}</summary><div class="checks">${filas}</div></details>`;
 }
 
 function statsTxt(p){
@@ -731,7 +719,7 @@ function admPartidos(){
       <label class="full">Informe del partido (PDF, hasta 6 MB)<input name="informeFile" type="file" accept="application/pdf,.pdf"></label>
       ${p.informe?`<label class="full" style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="informeDel"> Quitar el informe actual (${esc(p.informe.name)})</label>`:''}
       <label class="full">Nota<input name="nota" value="${esc(p.nota)}"></label>
-      <div class="full"><h3 style="margin:6px 0 4px">Firmas, SS, goles y asistencias</h3><p class="muted" style="margin:0 0 10px">Cargá solo los goles y asistencias que la liga cuenta. En un DF dejalos en cero.</p><div id="f-checks">${admChecks(p)}</div></div>
+      <div class="full"><h3 style="margin:6px 0 4px">Goles y asistencias</h3><p class="muted" style="margin:0 0 10px">Cargá solo los goles y asistencias que la liga cuenta. En un DF dejalos en cero.</p><div id="f-checks">${admChecks(p)}</div></div>
       <div class="full btns" style="margin:0"><button class="btn" data-act="guardar-partido">Guardar partido</button><button class="btn ghost" data-act="cancelar">Cancelar</button>
       ${ADM.edit!=='nuevo'?'<button class="btn danger" data-act="borrar-partido">Borrar partido</button>':''}</div>
     </div>`;
@@ -743,12 +731,9 @@ function admPartidos(){
 function admChecks(p){
   const l = liga(p.liga); if (!l) return '';
   const ins = plantel(l).filter(j=>j.estado==='inscripto');
-  const ss = p.ss||{}, st = p.stats||{};
-  const fi = p.firmas||{};
-  return `<div class="chk-row muted"><span>Jugador</span><span>Firmó</span><span>SS</span><span>Goles</span><span>Asist.</span></div>` +
+  const st = p.stats||{};
+  return `<div class="chk-row muted"><span>Jugador</span><span>Goles</span><span>Asist.</span></div>` +
     ins.map(j=>`<div class="chk-row"><span>${esc(j.nombre)}</span>
-      <input type="checkbox" data-f="${esc(j.id)}" ${fi[j.id]?'checked':''} aria-label="${esc(j.nombre)} firmó">
-      <input type="checkbox" data-s="${esc(j.id)}" ${ss[j.id]?'checked':''} aria-label="${esc(j.nombre)} mandó SS">
       <input type="number" min="0" data-g="${esc(j.id)}" value="${st[j.id]?.g||''}" aria-label="Goles de ${esc(j.nombre)}">
       <input type="number" min="0" data-a="${esc(j.id)}" value="${st[j.id]?.a||''}" aria-label="Asistencias de ${esc(j.nombre)}"></div>`).join('');
 }
@@ -850,10 +835,8 @@ async function guardarPartido(){
   const id = ADM.edit==='nuevo' ? ref('partidos').push().key : ADM.edit;
   const prev = (DATA.partidos||{})[id] || {};
   const o = {liga:v('liga'), jornada:v('jornada')?+v('jornada'):'', fecha:v('fecha'), hora:v('hora'), sala:v('sala'), rival:v('rival'), condicion:v('condicion'),
-    ssUrl:v('ssUrl'), gp:v('gp')===''?null:+v('gp'), gr:v('gr')===''?null:+v('gr'), tipo:v('tipo'), rec:v('rec'), nota:v('nota'), firmas:{}, ss:{}, stats:{}};
+    ssUrl:v('ssUrl'), gp:v('gp')===''?null:+v('gp'), gr:v('gr')===''?null:+v('gr'), tipo:v('tipo'), rec:v('rec'), nota:v('nota'), stats:{}};
   if (o.gp!==null && o.gr===null) o.gr = 0;
-  f.querySelectorAll('[data-f]').forEach(c=>{ if(c.checked) o.firmas[c.dataset.f]=true; });
-  f.querySelectorAll('[data-s]').forEach(c=>{ if(c.checked) o.ss[c.dataset.s]=true; });
   f.querySelectorAll('[data-g]').forEach(i=>{ const j=i.dataset.g, g=+i.value||0, a=+f.querySelector(`[data-a="${j}"]`).value||0; if(g||a) o.stats[j]={g,a}; });
   const file = f.querySelector('[name=replayFile]').files[0];
   const quitar = f.querySelector('[name=replayDel]')?.checked;
