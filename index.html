@@ -175,6 +175,14 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--silver)}
 .tabla td.l,.tabla th.l{text-align:left}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--silver);color:#000;padding:10px 18px;border-radius:8px;font-weight:600;z-index:50}
 
+.portal{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-top:10px}
+.puerta{display:block;text-decoration:none;background:radial-gradient(120% 90% at 0% 0%,#262B33 0%,transparent 55%),var(--panel);border:1px solid var(--line);border-radius:16px;padding:30px 28px}
+.puerta:hover{border-color:var(--silver)}
+.puerta img{width:84px;margin-bottom:14px}
+.puerta h2{font-size:clamp(1.8rem,3.6vw,2.6rem);margin-bottom:6px}
+.puerta .dato-chico{margin-top:14px;font-weight:600;color:var(--silver)}
+.volver{color:var(--muted);text-decoration:none;font-weight:600;white-space:nowrap}
+.volver:hover{color:var(--text)}
 .navsec{color:var(--muted);font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:0 4px;white-space:nowrap}
 .navsep{width:1px;height:22px;background:var(--line);margin:0 6px;flex:none}
 .subnav{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 6px}
@@ -513,6 +521,30 @@ function avisos(){
 }
 
 /* ---------- páginas ---------- */
+function pagePortal(){
+  const ps = partidosArr(), now = Date.now();
+  const prox = ps.find(p => !jugado(p) && dt(p).getTime() > now - 3*3600e3);
+  const st = (torneo().sorteo||{}).estado||'pendiente';
+  const eqs = tEquiposArr().length, anot = tJugsArr().length;
+  const tTxt = st==='corriendo' ? '<span class="vivo"><i></i>Sorteo en vivo ahora</span>'
+    : st==='terminado' ? `${eqs} equipos sorteados` : `${anot} anotados, sorteo pendiente`;
+  const sTxt = prox ? `Próximo: ${esc(prox.rival)}, ${fCorta(prox)} ${esc(prox.hora)}` : 'Fixture, planteles y resultados de las ligas';
+  return `<div class="portal">
+    <a class="puerta" href="#/seleccion">
+      <img src="assets/prime.png" alt="">
+      <h2>Selección Prime Haxball</h2>
+      <p class="muted">El equipo en las ligas: ${esc(ligasArr().map(l=>l.nombre).join(', '))||'sin ligas cargadas'}.</p>
+      <p class="dato-chico">${sTxt}</p>
+    </a>
+    <a class="puerta" href="#/torneo">
+      <img src="assets/prime.png" alt="">
+      <h2>Torneo interno</h2>
+      <p class="muted">${esc(tConfig().descripcion||'Torneo entre nosotros, con equipos sorteados y equilibrados por tier.')}</p>
+      <p class="dato-chico">${tTxt}</p>
+    </a>
+  </div>`;
+}
+
 function pageInicio(){
   const ps = partidosArr(), now = Date.now();
   const prox = ps.find(p => !jugado(p) && dt(p).getTime() > now - 3*3600e3);
@@ -1189,7 +1221,7 @@ function headerTorneo(sub){
   const c = tConfig();
   return `<h1 style="font-size:clamp(2.2rem,6vw,3.6rem)">${esc(c.nombre||'Torneo interno')}</h1>
     <p class="muted">${esc(c.descripcion||'Torneo entre jugadores de Prime Haxball, con equipos armados por sorteo equilibrado por tier.')}</p>
-    ${subnavTorneo(sub)}`;
+`;
 }
 function pageTorneo(sub){
   if (sub==='equipos') return headerTorneo(sub)+pageTorneoEquipos();
@@ -1276,12 +1308,20 @@ function pageTorneoReglas(){
 function route(){ const h=location.hash.replace(/^#\/?/,''); const [a,b]=h.split('/'); return {a:a||'', b}; }
 function render(){
   const r = route();
-  const sel = [['','Inicio'],['calendario','Calendario'],...(DATA?ligasArr().map(l=>['liga/'+l.id,l.nombre]):[]),['historico','Histórico'],['ss','Guía del SS']];
-  const tor = [['torneo','Torneo interno']];
-  const cur = r.a==='liga' ? 'liga/'+r.b : r.a;
+  const seccion = r.a==='torneo' ? 'torneo' : (['seleccion','calendario','liga','historico','ss'].includes(r.a) ? 'seleccion' : r.a==='admin' ? 'admin' : 'portal');
+  const cur = r.a==='liga' ? 'liga/'+r.b : r.a==='torneo' ? 'torneo'+(r.b?'/'+r.b:'') : r.a;
   const link = ([k,t]) => `<a href="#/${k}" class="${cur===k?'on':''}">${esc(t)}</a>`;
-  $('#nav').innerHTML = `<span class="navsec">Selección X5</span>${sel.map(link).join('')}<span class="navsep"></span><span class="navsec">Interno</span>${tor.map(link).join('')}`
-    + (MODE==='live' && IS_ADMIN ? `<span class="navsep"></span>${link(['admin','Panel'])}` : '');
+  let nav = '';
+  if (seccion==='seleccion'){
+    const sel = [['seleccion','Inicio'],['calendario','Calendario'],...(DATA?ligasArr().map(l=>['liga/'+l.id,l.nombre]):[]),['historico','Histórico'],['ss','Guía del SS']];
+    nav = `<a class="volver" href="#/">← Secciones</a><span class="navsep"></span><span class="navsec">Selección</span>${sel.map(link).join('')}`;
+  } else if (seccion==='torneo'){
+    const tor = [['torneo','Resumen'],['torneo/equipos','Equipos'],['torneo/sorteo','Sorteo'],['torneo/fixture','Fixture'],['torneo/reglas','Reglas']];
+    nav = `<a class="volver" href="#/">← Secciones</a><span class="navsep"></span><span class="navsec">Torneo interno</span>${tor.map(link).join('')}`;
+  } else if (seccion==='admin'){
+    nav = `<a class="volver" href="#/">← Secciones</a>`;
+  }
+  $('#nav').innerHTML = nav + (MODE==='live' && IS_ADMIN ? `<span class="navsep"></span>${link(['admin','Panel'])}` : '');
   let html;
   if (r.a==='admin') html = pageAdmin();
   else if (!DATA) html = MODE==='live' ? `<h2>Sin datos</h2><p class="muted">Un admin tiene que cargar los datos desde <a href="#/admin">el panel</a>.</p>` : '<p class="muted">Cargando…</p>';
@@ -1290,7 +1330,8 @@ function render(){
   else if (r.a==='ss') html = pageSS();
   else if (r.a==='historico') html = pageHistorico();
   else if (r.a==='torneo') html = pageTorneo(r.b);
-  else html = pageInicio();
+  else if (r.a==='seleccion') html = pageInicio();
+  else html = pagePortal();
   $('#app').innerHTML = html;
   tick();
 }
