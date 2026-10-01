@@ -880,15 +880,15 @@ function admReglas(){
 
 const COLORES = ['#E0B15A','#74B3E8','#8FD9AE','#E0313F','#C4A2FF','#E8A87A','#9CE8E0','#E87AB8'];
 const TORNEO_SEED = [
-  ['Dick','fedex_sz','S'],['Soul','xsoulzr','S'],
-  ['Biccan','biccante.','A'],['Mitoma','mitoreze','A'],['Roma','roma_gk','A'],['Mark','mark0_04','A'],
-  ['Almafuerte','almafuerte_v8','A'],['Gerr','gerrr7_','A'],['Migo','durr2','A'],['Jugarapido','zcmnt','A'],
-  ['VillaLuganoAlritmo','kiwour','B'],['Mimi','mmelann','B'],['Toto','ptenhaxball','B'],['Paredes','manu8670','B'],
-  ['Zurdo','lucas80cm','B'],['Xlr8','lauttttaro','B'],['Duko','tinchooocarp','B'],['Santi_adb','santi_adb__64469','B'],
-  ['Amadeo_nf','amadeo_nf','B'],['Saul','elfachalovi','B'],['Presoleta','alpisolosgile___20905','B'],
-  ['Alexis','elmasnuv','B'],['Haash','','B'],['Tom','','B'],
-  ['Aña','zwolfs','C'],['Mochi','mochiakd','C'],['Lanus','lanuscapodelsur99','C'],['Perlita Jam','externalhive','C'],
-  ['Cumbia','mati_pee','C'],['Xene','xeneize_120','C'],['Cenfe','cenfe00','C'],['Pastillitas','elrengoatr','C']
+  ['Dick','fedex_sz','S',7.39],['Soul','xsoulzr','S',7.01],
+  ['Biccan','biccante.','A',6.90],['Mitoma','mitoreze','A',6.86],['Roma','roma_gk','A',6.82],['Jugarapido','zcmnt','A',6.75],
+  ['Mark','mark0_04','A',6.74],['Almafuerte','almafuerte_v8','A',6.59],['Gerr','gerrr7_','A',6.55],['Migo','durr2','A',6.26],
+  ['VillaLuganoAlritmo','kiwour','B',5.96],['Mimi','mmelann','B',5.93],['Toto','ptenhaxball','B',5.86],['Paredes','manu8670','B',5.85],
+  ['Zurdo','lucas80cm','B',5.64],['Xlr8','lauttttaro','B',5.63],['Duko','tinchooocarp','B',5.58],['Santi_adb','santi_adb__64469','B',5.47],
+  ['Amadeo_nf','amadeo_nf','B',5.42],['Haash','','B',5.08],['Saul','elfachalovi','B',5.07],['Presoleta','alpisolosgile___20905','B',4.94],
+  ['Alexis','elmasnuv','B',0],['Tom','','B',0],
+  ['Aña','zwolfs','C',4.81],['Mochi','mochiakd','C',4.80],['Lanus','lanuscapodelsur99','C',4.73],['Perlita Jam','externalhive','C',4.60],
+  ['Cumbia','mati_pee','C',4.46],['Xene','xeneize_120','C',3.41],['Cenfe','cenfe00','C',0],['Pastillitas','elrengoatr','C',0]
 ];
 const slug = x => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'').slice(0,20);
 
@@ -914,10 +914,11 @@ function admTorneo(){
 function admTJugadores(){
   const js = tJugsArr();
   const filas = js.map(j=>`<div class="adm-row" style="--liga:var(--line)">
-    <div style="display:grid;grid-template-columns:1fr 1fr 90px;gap:8px;flex:1">
+    <div style="display:grid;grid-template-columns:1fr 1fr 90px 90px;gap:8px;flex:1">
       <input data-tn="${esc(j.id)}" value="${esc(j.nombre)}" aria-label="Nombre">
       <input data-td="${esc(j.id)}" value="${esc(j.discord||'')}" aria-label="Discord">
       <select data-tt="${esc(j.id)}" aria-label="Tier">${['',...TIERS].map(t=>opt(t,t||'Sin tier',j.tier||'')).join('')}</select>
+      <input data-tm="${esc(j.id)}" type="number" step="0.01" min="0" value="${esc(j.media||'')}" placeholder="Media" aria-label="Media">
     </div><button class="btn danger sm" data-deltjug="${esc(j.id)}">Quitar</button></div>`).join('');
   const falta = sinTier();
   return `${falta.length?`<div class="aviso">Falta el tier de: ${esc(falta.map(j=>j.nombre).join(', '))}. Sin tier no entran al sorteo.</div>`:''}
@@ -927,6 +928,7 @@ function admTJugadores(){
     <div class="form" style="margin-top:14px"><h3 class="full">Agregar jugador</h3>
       <label>Nombre<input id="ntj-n"></label><label>Discord<input id="ntj-d"></label>
       <label>Tier<select id="ntj-t">${['',...TIERS].map(t=>opt(t,t||'Sin tier','')).join('')}</select></label>
+      <label>Media<input id="ntj-m" type="number" step="0.01" min="0"></label>
       <div class="full"><button class="btn ghost" data-act="agregar-tjug">Agregar</button></div></div>`;
 }
 function admTEquipos(){
@@ -949,7 +951,8 @@ function admTSorteo(){
   const cupo = (+tConfig().porEquipo||5) * eqs.length;
   return `<div class="form">
     <div class="full"><p class="muted">Estado: <b>${esc(s.estado||'pendiente')}</b>. Elegidos ${picks.length} de ${cupo}. Quedan ${libres.length} en los bombos.
-      Lo que vayas sorteando se ve al toque en la página del sorteo.</p></div>
+      Lo que vayas sorteando se ve al toque en la página del sorteo.</p>
+      <p class="muted">Capitanes, los ${esc(eqs.length)} de mejor media: ${esc(capitanes().map(j=>j.nombre+' ('+(+j.media||0).toFixed(2)+')').join(', '))||'faltan cargar las medias'}. Se sortean primero, uno por equipo.</p></div>
     <div class="full btns" style="margin:0">
       <button class="btn" data-act="sorteo-empezar">${picks.length?'Seguir el sorteo':'Empezar el sorteo'}</button>
       <button class="btn ghost" data-act="sorteo-siguiente">Sortear el próximo</button>
@@ -990,8 +993,17 @@ async function sorteoSiguiente(){
   const n = picks.length, ronda = Math.floor(n/eqs.length), idx = n%eqs.length;
   const orden = ronda%2 ? [...eqs].reverse() : eqs;
   const equipo = orden[idx];
-  const mejor = Math.min(...libres.map(j=>tRank(j.tier)));
-  const bombo = libres.filter(j=>tRank(j.tier)===mejor);
+  const capIds = new Set(capitanes().map(j=>j.id));
+  let bombo;
+  if (picks.length < eqs.length){
+    bombo = libres.filter(j=>capIds.has(j.id));
+  } else {
+    const resto = libres.filter(j=>!capIds.has(j.id));
+    if (!resto.length){ await ref('torneo/sorteo').update({estado:'terminado'}); return false; }
+    const mejor = Math.min(...resto.map(j=>tRank(j.tier)));
+    bombo = resto.filter(j=>tRank(j.tier)===mejor);
+  }
+  if (!bombo.length){ await ref('torneo/sorteo').update({estado:'terminado'}); return false; }
   const elegido = bombo[Math.floor(Math.random()*bombo.length)];
   const dura = 3200;
   await ref('torneo/sorteo').set({estado:'corriendo', girando:{equipo:equipo.id, candidatos:bombo.map(j=>j.id), hasta:Date.now()+dura}});
@@ -1149,18 +1161,19 @@ document.addEventListener('click', async e=>{
       while(DATA.reglamentos?.[id]) id+='2';
       await ref('reglamentos/'+id).set({titulo:ti, clave:[], texto:''}); toast('Reglamento creado'); render(); }
     if (a==='cargar-anotados'){ const up={};
-      TORNEO_SEED.forEach(([n,d,t])=>{ const id=slug(n); if(!torneo().jugadores?.[id]) up['torneo/jugadores/'+id]={nombre:n,discord:d,tier:t}; });
+      TORNEO_SEED.forEach(([n,d,t,m])=>{ const id=slug(n); if(!torneo().jugadores?.[id]) up['torneo/jugadores/'+id]={nombre:n,discord:d,tier:t,media:m||0}; });
       if(!Object.keys(up).length) return alert('Ya están todos cargados.');
       await ref('').update(up); toast('Anotados cargados'); render(); }
     if (a==='guardar-tjugs'){ const up={};
       document.querySelectorAll('[data-tn]').forEach(i=>{ const id=i.dataset.tn;
         up[`torneo/jugadores/${id}/nombre`]=i.value.trim();
         up[`torneo/jugadores/${id}/discord`]=document.querySelector(`[data-td="${id}"]`).value.trim();
-        up[`torneo/jugadores/${id}/tier`]=document.querySelector(`[data-tt="${id}"]`).value; });
+        up[`torneo/jugadores/${id}/tier`]=document.querySelector(`[data-tt="${id}"]`).value;
+        up[`torneo/jugadores/${id}/media`]=+document.querySelector(`[data-tm="${id}"]`).value||0; });
       await ref('').update(up); toast('Jugadores guardados'); }
     if (a==='agregar-tjug'){ const n=$('#ntj-n').value.trim(); if(!n) return alert('Poné el nombre.');
       let id=slug(n)||'jugador'; while(torneo().jugadores?.[id]) id+='2';
-      await ref('torneo/jugadores/'+id).set({nombre:n, discord:$('#ntj-d').value.trim(), tier:$('#ntj-t').value});
+      await ref('torneo/jugadores/'+id).set({nombre:n, discord:$('#ntj-d').value.trim(), tier:$('#ntj-t').value, media:+$('#ntj-m').value||0});
       toast('Jugador agregado'); render(); }
     if (a==='crear-equipos'){ const cant=Math.max(2,Math.min(8,+$('#ne-cant').value||6)), up={};
       for(let i=1;i<=cant;i++) up['torneo/equipos/eq'+i]={nombre:'Equipo '+i, color:COLORES[(i-1)%COLORES.length], orden:i};
@@ -1211,6 +1224,8 @@ const tPartidosArr = () => Object.entries(torneo().partidos||{}).map(([id,x])=>(
 const tJug = id => (torneo().jugadores||{})[id] || {nombre:id, tier:''};
 const tierBadge = t => `<span class="tier t-${esc(t||'')}">${esc(t||'?')}</span>`;
 const sinTier = () => tJugsArr().filter(j=>!j.tier);
+const capitanes = () => tJugsArr().filter(j=>j.tier).sort((a,b)=>(+b.media||0)-(+a.media||0)).slice(0, tEquiposArr().length);
+const esCapitan = id => capitanes().some(j=>j.id===id);
 function plantelesSorteo(){
   const eq = {}; tEquiposArr().forEach(e=>eq[e.id]=[]);
   tPicksArr().forEach(p=>{ if(eq[p.equipo]) eq[p.equipo].push(p.jugador); });
@@ -1253,6 +1268,8 @@ function pageTorneo(sub){
       <div class="dato"><div class="muted">Sorteo</div><div class="v" style="font-size:1.2rem;line-height:1.6">${estado}</div><div class="muted">${picks.length} elegidos</div></div>
       ${falta.length?`<div class="dato"><div class="muted">Sin tier</div><div class="v warn">${falta.length}</div><div class="muted">${esc(falta.map(j=>j.nombre).join(', '))}</div></div>`:''}
     </div>
+    ${eqs.length&&capitanes().length?`<section><h2>Capitanes</h2><p class="muted">Son los ${eqs.length} de mejor media y van uno por equipo.</p>
+      <div class="plantel">${capitanes().map(j=>`<div class="jug"><div><b>${esc(j.nombre)}</b><small>media ${(+j.media||0).toFixed(2)}</small></div>${tierBadge(j.tier)}</div>`).join('')}</div></section>`:''}
     ${prox.length?`<section><h2>Próximos partidos</h2><div class="lista">${prox.map(cardTorneo).join('')}</div></section>`:''}
     <section><h2>Anotados</h2>${listaAnotados()}</section>`;
 }
@@ -1265,7 +1282,7 @@ function pageTorneoEquipos(){
   const pl = plantelesSorteo(), cupo = +tConfig().porEquipo||5;
   return `<div class="equipos">${eqs.map(e=>{
     const ids = pl[e.id]||[];
-    const filas = ids.map(id=>`<li><span>${esc(tJug(id).nombre)}</span>${tierBadge(tJug(id).tier)}</li>`).join('')
+    const filas = ids.map(id=>`<li><span>${esc(tJug(id).nombre)}${esCapitan(id)?' <span class="tag">C</span>':''}</span>${tierBadge(tJug(id).tier)}</li>`).join('')
       + Array.from({length:Math.max(0,cupo-ids.length)},()=>`<li class="vacio"><span>Libre</span></li>`).join('');
     return `<div class="equipo" style="--eq:${esc(e.color||'#C9CED6')}"><h3>${esc(e.nombre)}</h3><ul>${filas}</ul></div>`;
   }).join('')}</div>`;
@@ -1296,8 +1313,11 @@ function pageTorneoSorteo(){
       <div class="donde">${tierBadge(tJug(ult.jugador).tier)} va a ${esc((torneo().equipos||{})[ult.equipo]?.nombre||'?')}</div>
     </div>`;
   }
-  const bombos = TIERS.map(t=>{
-    const en = libres.filter(j=>j.tier===t);
+  const caps = capitanes().filter(j=>!usados.has(j.id));
+  const idsCap = new Set(capitanes().map(j=>j.id));
+  const bomboCap = caps.length ? `<div class="bombo"><span class="tier t-S">C</span><span class="n">${caps.length} capitanes sin equipo</span>${caps.map(j=>`<span class="pill">${esc(j.nombre)} <span class="muted">${(+j.media||0).toFixed(2)}</span></span>`).join('')}</div>` : '';
+  const bombos = bomboCap + TIERS.map(t=>{
+    const en = libres.filter(j=>j.tier===t && !idsCap.has(j.id));
     return en.length ? `<div class="bombo">${tierBadge(t)}<span class="n">${en.length} sin elegir</span>${en.map(j=>`<span class="pill">${esc(j.nombre)}</span>`).join('')}</div>` : '';
   }).join('');
   const sin = libres.filter(j=>!j.tier);
