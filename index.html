@@ -200,6 +200,13 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--silver)}
 .sorteo-vivo{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 28px;text-align:center}
 .sorteo-vivo .quien{font-family:var(--display);font-weight:900;font-size:clamp(2.2rem,7vw,4.4rem);line-height:1}
 .sorteo-vivo .donde{font-size:1.2rem;color:var(--silver);font-weight:600}
+.sorteo-vivo.girando{border-color:var(--warn);box-shadow:0 0 0 1px rgba(242,196,107,.25)}
+.sorteo-vivo.girando .quien{color:var(--warn);animation:latir .6s ease-in-out infinite}
+.sorteo-vivo.nuevo{border-color:var(--silver);box-shadow:0 0 36px rgba(201,206,214,.22)}
+.sorteo-vivo.nuevo .quien{animation:aparecer .55s cubic-bezier(.2,1.4,.4,1)}
+@keyframes latir{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+@keyframes aparecer{0%{transform:scale(.55);opacity:0}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+.ruleta-sub{color:var(--muted);margin-top:6px}
 .bombos{display:grid;gap:8px;margin-top:14px}
 .bombo{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .bombo .n{color:var(--muted);font-size:.95rem}
@@ -946,7 +953,7 @@ function admTSorteo(){
     <div class="full btns" style="margin:0">
       <button class="btn" data-act="sorteo-empezar">${picks.length?'Seguir el sorteo':'Empezar el sorteo'}</button>
       <button class="btn ghost" data-act="sorteo-siguiente">Sortear el próximo</button>
-      <button class="btn ghost" data-act="sorteo-auto">${ADM.auto?'Parar el automático':'Automático cada 4 s'}</button>
+      <button class="btn ghost" data-act="sorteo-auto">${ADM.auto?'Parar el automático':'Automático, uno atrás de otro'}</button>
       <button class="btn ghost" data-act="sorteo-deshacer">Deshacer el último</button>
       <button class="btn danger" data-act="sorteo-reiniciar">Reiniciar todo</button>
     </div></div>
@@ -986,7 +993,11 @@ async function sorteoSiguiente(){
   const mejor = Math.min(...libres.map(j=>tRank(j.tier)));
   const bombo = libres.filter(j=>tRank(j.tier)===mejor);
   const elegido = bombo[Math.floor(Math.random()*bombo.length)];
+  const dura = 3200;
+  await ref('torneo/sorteo').set({estado:'corriendo', girando:{equipo:equipo.id, candidatos:bombo.map(j=>j.id), hasta:Date.now()+dura}});
+  await new Promise(r=>setTimeout(r, dura));
   await db.ref('prime/torneo/picks').push({equipo:equipo.id, jugador:elegido.id, ts:Date.now()});
+  await ref('torneo/sorteo').set({estado:'corriendo'});
   return true;
 }
 
@@ -1162,14 +1173,15 @@ document.addEventListener('click', async e=>{
     if (a==='sorteo-empezar'){ await ref('torneo/sorteo').update({estado:'corriendo'}); toast('Sorteo en vivo'); }
     if (a==='sorteo-siguiente'){ await ref('torneo/sorteo').update({estado:'corriendo'}); await sorteoSiguiente(); }
     if (a==='sorteo-auto'){
-      if (ADM.auto){ clearInterval(ADM.auto); ADM.auto=null; toast('Automático parado'); render(); }
+      if (ADM.auto){ ADM.auto=null; toast('Automático parado'); render(); }
       else { await ref('torneo/sorteo').update({estado:'corriendo'});
-        ADM.auto = setInterval(async ()=>{ const sigue = await sorteoSiguiente(); if(!sigue){ clearInterval(ADM.auto); ADM.auto=null; toast('Sorteo terminado'); render(); } }, 4000);
-        await sorteoSiguiente(); render(); } }
+        ADM.auto = true;
+        (async ()=>{ while(ADM.auto){ const sigue = await sorteoSiguiente(); if(!sigue){ ADM.auto=null; toast('Sorteo terminado'); render(); break; } await new Promise(r=>setTimeout(r,1800)); } })();
+        render(); } }
     if (a==='sorteo-deshacer'){ const ps=tPicksArr(); if(!ps.length) return;
       await ref('torneo/picks/'+ps[ps.length-1].id).remove(); await ref('torneo/sorteo').update({estado:'corriendo'}); toast('Pick deshecho'); }
     if (a==='sorteo-reiniciar'){ if(!confirm('¿Borrar todo el sorteo y empezar de cero?')) return;
-      if(ADM.auto){ clearInterval(ADM.auto); ADM.auto=null; }
+      ADM.auto=null;
       await ref('torneo/picks').remove(); await ref('torneo/sorteo').set({estado:'pendiente'}); toast('Sorteo reiniciado'); render(); }
     if (a==='agregar-tpartido'){ const A=$('#ntp-a').value, B=$('#ntp-b').value;
       if(!A||!B||A===B) return alert('Elegí dos equipos distintos.');
@@ -1263,13 +1275,27 @@ function pageTorneoSorteo(){
   const usados = new Set(picks.map(p=>p.jugador));
   const libres = tJugsArr().filter(j=>!usados.has(j.id));
   const ult = picks[picks.length-1];
+  const gir = s.girando && Date.now() < (s.girando.hasta||0)+1500 ? s.girando : null;
   const cab = s.estado==='corriendo' ? '<p class="vivo"><i></i>Sorteo en vivo, se actualiza solo</p>'
     : s.estado==='terminado' ? '<p class="muted">El sorteo terminó.</p>' : '<p class="muted">El sorteo todavía no empezó. Cuando arranque, esta página se actualiza sola.</p>';
-  const vivo = ult ? `<div class="sorteo-vivo">
+  let vivo = '';
+  if (gir){
+    const nombres = (gir.candidatos||[]).map(id=>tJug(id).nombre);
+    vivo = `<div class="sorteo-vivo girando">
+      <div class="muted">Girando para</div>
+      <div class="donde">${esc((torneo().equipos||{})[gir.equipo]?.nombre||'?')}</div>
+      <div class="quien" id="ruleta" data-nombres='${esc(JSON.stringify(nombres))}'>${esc(nombres[0]||'…')}</div>
+      <div class="ruleta-sub">${nombres.length} en el bombo</div>
+    </div>`;
+    setTimeout(()=>{ if(route().a==='torneo') render(); }, Math.max(400, gir.hasta-Date.now()+1600));
+  } else if (ult){
+    const reciente = Date.now() - (ult.ts||0) < 6000;
+    vivo = `<div class="sorteo-vivo ${reciente?'nuevo':''}">
       <div class="muted">Último elegido</div>
       <div class="quien">${esc(tJug(ult.jugador).nombre)}</div>
       <div class="donde">${tierBadge(tJug(ult.jugador).tier)} va a ${esc((torneo().equipos||{})[ult.equipo]?.nombre||'?')}</div>
-    </div>` : '';
+    </div>`;
+  }
   const bombos = TIERS.map(t=>{
     const en = libres.filter(j=>j.tier===t);
     return en.length ? `<div class="bombo">${tierBadge(t)}<span class="n">${en.length} sin elegir</span>${en.map(j=>`<span class="pill">${esc(j.nombre)}</span>`).join('')}</div>` : '';
@@ -1342,6 +1368,10 @@ function tick(){
   document.querySelectorAll('[data-cdbox]').forEach(el=>{ const ms=+el.dataset.cdbox-now; el.classList.toggle('urg', ms>0 && ms<3*3600e3); });
 }
 setInterval(tick, 30000);
+setInterval(()=>{ const el = document.getElementById('ruleta'); if(!el) return;
+  let n = []; try { n = JSON.parse(el.dataset.nombres||'[]'); } catch(e){}
+  if (n.length) el.textContent = n[Math.floor(Math.random()*n.length)];
+}, 90);
 window.addEventListener('hashchange', ()=>{ if(!location.hash.startsWith('#/admin')) ADM.edit=null; window.scrollTo(0,0); render(); });
 
 /* ---------- arranque ---------- */
