@@ -923,6 +923,7 @@ function admTJugadores(){
   const falta = sinTier();
   return `${falta.length?`<div class="aviso">Falta el tier de: ${esc(falta.map(j=>j.nombre).join(', '))}. Sin tier no entran al sorteo.</div>`:''}
     <div class="btns" style="margin:14px 0"><button class="btn ghost" data-act="cargar-anotados">Cargar los anotados de la lista</button>
+      <button class="btn ghost" data-act="actualizar-medias">Actualizar tiers y medias de la lista</button>
       <button class="btn" data-act="guardar-tjugs">Guardar cambios</button></div>
     <div class="lista">${filas||'<p class="muted">Todavía no hay jugadores.</p>'}</div>
     <div class="form" style="margin-top:14px"><h3 class="full">Agregar jugador</h3>
@@ -952,7 +953,7 @@ function admTSorteo(){
   return `<div class="form">
     <div class="full"><p class="muted">Estado: <b>${esc(s.estado||'pendiente')}</b>. Elegidos ${picks.length} de ${cupo}. Quedan ${libres.length} en los bombos.
       Lo que vayas sorteando se ve al toque en la página del sorteo.</p>
-      <p class="muted">Capitanes, los ${esc(eqs.length)} de mejor media: ${esc(capitanes().map(j=>j.nombre+' ('+(+j.media||0).toFixed(2)+')').join(', '))||'faltan cargar las medias'}. Se sortean primero, uno por equipo.</p></div>
+      <p class="muted">Bombo 1, los ${esc(eqs.length)} de mejor media y capitanes de cada equipo: ${esc(capitanes().map(j=>j.nombre+' ('+(+j.media||0).toFixed(2)+')').join(', '))||'faltan cargar las medias'}.</p></div>
     <div class="full btns" style="margin:0">
       <button class="btn" data-act="sorteo-empezar">${picks.length?'Seguir el sorteo':'Empezar el sorteo'}</button>
       <button class="btn ghost" data-act="sorteo-siguiente">Sortear el próximo</button>
@@ -986,23 +987,18 @@ function admTFixture(){
 async function sorteoSiguiente(){
   const eqs = tEquiposArr();
   if (eqs.length < 2) { alert('Creá los equipos primero.'); return false; }
-  const picks = tPicksArr(), usados = new Set(picks.map(p=>p.jugador));
-  const libres = tJugsArr().filter(j=>!usados.has(j.id) && j.tier);
+  const picks = tPicksArr();
   const cupo = (+tConfig().porEquipo||5) * eqs.length;
-  if (!libres.length || picks.length >= cupo){ await ref('torneo/sorteo').update({estado:'terminado'}); return false; }
+  if (picks.length >= cupo){ await ref('torneo/sorteo').update({estado:'terminado'}); return false; }
   const n = picks.length, ronda = Math.floor(n/eqs.length), idx = n%eqs.length;
   const orden = ronda%2 ? [...eqs].reverse() : eqs;
   const equipo = orden[idx];
-  const capIds = new Set(capitanes().map(j=>j.id));
-  let bombo;
-  if (picks.length < eqs.length){
-    bombo = libres.filter(j=>capIds.has(j.id));
-  } else {
-    const resto = libres.filter(j=>!capIds.has(j.id));
-    if (!resto.length){ await ref('torneo/sorteo').update({estado:'terminado'}); return false; }
-    const mejor = Math.min(...resto.map(j=>tRank(j.tier)));
-    bombo = resto.filter(j=>tRank(j.tier)===mejor);
-  }
+  const usados = new Set(picks.map(p=>p.jugador));
+  const libres = tJugsArr().filter(j=>!usados.has(j.id) && j.tier);
+  if (!libres.length){ await ref('torneo/sorteo').update({estado:'terminado'}); return false; }
+  const bombosAll = bombosTorneo();
+  let bombo = (bombosAll[ronda]||[]).filter(j=>!usados.has(j.id));
+  if (!bombo.length) bombo = libres;
   if (!bombo.length){ await ref('torneo/sorteo').update({estado:'terminado'}); return false; }
   const elegido = bombo[Math.floor(Math.random()*bombo.length)];
   const dura = 3200;
@@ -1164,6 +1160,10 @@ document.addEventListener('click', async e=>{
       TORNEO_SEED.forEach(([n,d,t,m])=>{ const id=slug(n); if(!torneo().jugadores?.[id]) up['torneo/jugadores/'+id]={nombre:n,discord:d,tier:t,media:m||0}; });
       if(!Object.keys(up).length) return alert('Ya están todos cargados.');
       await ref('').update(up); toast('Anotados cargados'); render(); }
+    if (a==='actualizar-medias'){ const up={};
+      TORNEO_SEED.forEach(([n,d,ti,m])=>{ const id=slug(n); if(torneo().jugadores?.[id]){ up[`torneo/jugadores/${id}/tier`]=ti; up[`torneo/jugadores/${id}/media`]=m||0; } });
+      if(!Object.keys(up).length) return alert('No hay jugadores de la lista cargados.');
+      await ref('').update(up); toast('Tiers y medias actualizados'); render(); }
     if (a==='guardar-tjugs'){ const up={};
       document.querySelectorAll('[data-tn]').forEach(i=>{ const id=i.dataset.tn;
         up[`torneo/jugadores/${id}/nombre`]=i.value.trim();
@@ -1224,7 +1224,13 @@ const tPartidosArr = () => Object.entries(torneo().partidos||{}).map(([id,x])=>(
 const tJug = id => (torneo().jugadores||{})[id] || {nombre:id, tier:''};
 const tierBadge = t => `<span class="tier t-${esc(t||'')}">${esc(t||'?')}</span>`;
 const sinTier = () => tJugsArr().filter(j=>!j.tier);
-const capitanes = () => tJugsArr().filter(j=>j.tier).sort((a,b)=>(+b.media||0)-(+a.media||0)).slice(0, tEquiposArr().length);
+const porMedia = () => tJugsArr().filter(j=>j.tier).sort((a,b)=>(+b.media||0)-(+a.media||0));
+function bombosTorneo(){
+  const n = tEquiposArr().length || 1, js = porMedia(), out = [];
+  for (let i=0;i<js.length;i+=n) out.push(js.slice(i,i+n));
+  return out;
+}
+const capitanes = () => bombosTorneo()[0] || [];
 const esCapitan = id => capitanes().some(j=>j.id===id);
 function plantelesSorteo(){
   const eq = {}; tEquiposArr().forEach(e=>eq[e.id]=[]);
@@ -1268,7 +1274,7 @@ function pageTorneo(sub){
       <div class="dato"><div class="muted">Sorteo</div><div class="v" style="font-size:1.2rem;line-height:1.6">${estado}</div><div class="muted">${picks.length} elegidos</div></div>
       ${falta.length?`<div class="dato"><div class="muted">Sin tier</div><div class="v warn">${falta.length}</div><div class="muted">${esc(falta.map(j=>j.nombre).join(', '))}</div></div>`:''}
     </div>
-    ${eqs.length&&capitanes().length?`<section><h2>Capitanes</h2><p class="muted">Son los ${eqs.length} de mejor media y van uno por equipo.</p>
+    ${eqs.length&&capitanes().length?`<section><h2>Capitanes</h2><p class="muted">Son los ${eqs.length} de mejor media, el bombo 1, y va uno por equipo.</p>
       <div class="plantel">${capitanes().map(j=>`<div class="jug"><div><b>${esc(j.nombre)}</b><small>media ${(+j.media||0).toFixed(2)}</small></div>${tierBadge(j.tier)}</div>`).join('')}</div></section>`:''}
     ${prox.length?`<section><h2>Próximos partidos</h2><div class="lista">${prox.map(cardTorneo).join('')}</div></section>`:''}
     <section><h2>Anotados</h2>${listaAnotados()}</section>`;
@@ -1313,12 +1319,12 @@ function pageTorneoSorteo(){
       <div class="donde">${tierBadge(tJug(ult.jugador).tier)} va a ${esc((torneo().equipos||{})[ult.equipo]?.nombre||'?')}</div>
     </div>`;
   }
-  const caps = capitanes().filter(j=>!usados.has(j.id));
-  const idsCap = new Set(capitanes().map(j=>j.id));
-  const bomboCap = caps.length ? `<div class="bombo"><span class="tier t-S">C</span><span class="n">${caps.length} capitanes sin equipo</span>${caps.map(j=>`<span class="pill">${esc(j.nombre)} <span class="muted">${(+j.media||0).toFixed(2)}</span></span>`).join('')}</div>` : '';
-  const bombos = bomboCap + TIERS.map(t=>{
-    const en = libres.filter(j=>j.tier===t && !idsCap.has(j.id));
-    return en.length ? `<div class="bombo">${tierBadge(t)}<span class="n">${en.length} sin elegir</span>${en.map(j=>`<span class="pill">${esc(j.nombre)}</span>`).join('')}</div>` : '';
+  const bombos = bombosTorneo().map((b,i)=>{
+    const en = b.filter(j=>!usados.has(j.id));
+    if (!en.length) return '';
+    return `<div class="bombo"><span class="tier t-${i===0?'S':i===1?'A':i===2?'B':'C'}">${i+1}</span>
+      <span class="n">${i===0?'capitanes, ':''}${en.length} sin elegir</span>
+      ${en.map(j=>`<span class="pill">${esc(j.nombre)} <span class="muted">${(+j.media||0).toFixed(2)}</span></span>`).join('')}</div>`;
   }).join('');
   const sin = libres.filter(j=>!j.tier);
   return `${cab}${vivo}
