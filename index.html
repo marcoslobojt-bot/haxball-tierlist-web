@@ -953,7 +953,7 @@ function admTSorteo(){
   return `<div class="form">
     <div class="full"><p class="muted">Estado: <b>${esc(s.estado||'pendiente')}</b>. Elegidos ${picks.length} de ${cupo}. Quedan ${libres.length} en los bombos.
       Lo que vayas sorteando se ve al toque en la página del sorteo.</p>
-      <p class="muted">Bombo 1, los ${esc(eqs.length)} de mejor media y capitanes de cada equipo: ${esc(capitanes().map(j=>j.nombre+' ('+(+j.media||0).toFixed(2)+')').join(', '))||'faltan cargar las medias'}.</p></div>
+      <p class="muted">Bombo 1, los ${esc(eqs.length)} de mejor media y capitanes de cada equipo: ${esc(capitanes().map(j=>j.nombre+' ('+mediaEf(j).toFixed(2)+')').join(', '))||'faltan cargar las medias'}.</p></div>
     <div class="full btns" style="margin:0">
       <button class="btn" data-act="sorteo-empezar">${picks.length?'Seguir el sorteo':'Empezar el sorteo'}</button>
       <button class="btn ghost" data-act="sorteo-siguiente">Sortear el próximo</button>
@@ -1224,7 +1224,14 @@ const tPartidosArr = () => Object.entries(torneo().partidos||{}).map(([id,x])=>(
 const tJug = id => (torneo().jugadores||{})[id] || {nombre:id, tier:''};
 const tierBadge = t => `<span class="tier t-${esc(t||'')}">${esc(t||'?')}</span>`;
 const sinTier = () => tJugsArr().filter(j=>!j.tier);
-const porMedia = () => tJugsArr().filter(j=>j.tier).sort((a,b)=>(+b.media||0)-(+a.media||0));
+function mediaTier(t){
+  const con = tJugsArr().filter(j=>j.tier===t && +j.media>0);
+  if (con.length) return con.reduce((a,j)=>a+ +j.media,0)/con.length;
+  return {S:7.2, A:6.6, B:5.4, C:4.3, D:1.4}[t] || 0;
+}
+const mediaEf = j => +j.media>0 ? +j.media : mediaTier(j.tier);
+const estimada = j => !(+j.media>0);
+const porMedia = () => tJugsArr().filter(j=>j.tier).sort((a,b)=>mediaEf(b)-mediaEf(a));
 function bombosTorneo(){
   const n = tEquiposArr().length || 1, js = porMedia(), out = [];
   for (let i=0;i<js.length;i+=n) out.push(js.slice(i,i+n));
@@ -1275,7 +1282,7 @@ function pageTorneo(sub){
       ${falta.length?`<div class="dato"><div class="muted">Sin tier</div><div class="v warn">${falta.length}</div><div class="muted">${esc(falta.map(j=>j.nombre).join(', '))}</div></div>`:''}
     </div>
     ${eqs.length&&capitanes().length?`<section><h2>Capitanes</h2><p class="muted">Son los ${eqs.length} de mejor media, el bombo 1, y va uno por equipo.</p>
-      <div class="plantel">${capitanes().map(j=>`<div class="jug"><div><b>${esc(j.nombre)}</b><small>media ${(+j.media||0).toFixed(2)}</small></div>${tierBadge(j.tier)}</div>`).join('')}</div></section>`:''}
+      <div class="plantel">${capitanes().map(j=>`<div class="jug"><div><b>${esc(j.nombre)}</b><small>media ${estimada(j)?'≈':''}${mediaEf(j).toFixed(2)}</small></div>${tierBadge(j.tier)}</div>`).join('')}</div></section>`:''}
     ${prox.length?`<section><h2>Próximos partidos</h2><div class="lista">${prox.map(cardTorneo).join('')}</div></section>`:''}
     <section><h2>Anotados</h2>${listaAnotados()}</section>`;
 }
@@ -1324,7 +1331,7 @@ function pageTorneoSorteo(){
     if (!en.length) return '';
     return `<div class="bombo"><span class="tier t-${i===0?'S':i===1?'A':i===2?'B':'C'}">${i+1}</span>
       <span class="n">${i===0?'capitanes, ':''}${en.length} sin elegir</span>
-      ${en.map(j=>`<span class="pill">${esc(j.nombre)} <span class="muted">${(+j.media||0).toFixed(2)}</span></span>`).join('')}</div>`;
+      ${en.map(j=>`<span class="pill">${esc(j.nombre)} <span class="muted">${estimada(j)?'≈':''}${mediaEf(j).toFixed(2)}</span></span>`).join('')}</div>`;
   }).join('');
   const sin = libres.filter(j=>!j.tier);
   return `${cab}${vivo}
