@@ -1062,9 +1062,8 @@ function admTJugadores(){
       <select data-tt="${esc(j.id)}" aria-label="Tier">${['',...TIERS].map(t=>opt(t,t||'Sin tier',j.tier||'')).join('')}</select>
       <input data-tm="${esc(j.id)}" type="number" step="0.01" min="0" value="${esc(j.media||'')}" placeholder="Media" aria-label="Media">
     </div>
-    <div style="flex-basis:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:6px">
-      <input data-tpf="${esc(j.id)}" value="${esc(j.puntoFuerte||'')}" placeholder="Punto fuerte" aria-label="Punto fuerte">
-      ${ATRIBUTOS.map(([k,t])=>`<input data-ta="${esc(j.id)}|${k}" type="number" step="0.1" min="0" max="10" value="${esc((j.st||{})[k]||'')}" placeholder="${esc(t)}" aria-label="${esc(t)} de ${esc(j.nombre)}">`).join('')}
+    <div style="flex-basis:100%">
+      <input data-tpf="${esc(j.id)}" value="${esc(j.puntoFuerte||'')}" placeholder="Punto fuerte (opcional)" aria-label="Punto fuerte">
     </div><button class="btn danger sm" data-deltjug="${esc(j.id)}">Quitar</button></div>`).join('');
   const falta = sinTier();
   return `${falta.length?`<div class="aviso">Falta el tier de: ${esc(falta.map(j=>j.nombre).join(', '))}. Sin tier no entran al sorteo.</div>`:''}
@@ -1441,8 +1440,7 @@ document.addEventListener('click', async e=>{
         up[`torneo/jugadores/${id}/discord`]=document.querySelector(`[data-td="${id}"]`).value.trim();
         up[`torneo/jugadores/${id}/tier`]=document.querySelector(`[data-tt="${id}"]`).value;
         up[`torneo/jugadores/${id}/media`]=+document.querySelector(`[data-tm="${id}"]`).value||0;
-        up[`torneo/jugadores/${id}/puntoFuerte`]=document.querySelector(`[data-tpf="${id}"]`).value.trim();
-        ATRIBUTOS.forEach(([k])=>{ const el=document.querySelector(`[data-ta="${id}|${k}"]`); up[`torneo/jugadores/${id}/st/${k}`]= el&&el.value!=='' ? +el.value : null; }); });
+        up[`torneo/jugadores/${id}/puntoFuerte`]=document.querySelector(`[data-tpf="${id}"]`).value.trim(); });
       await ref('').update(up); toast('Jugadores guardados'); }
     if (a==='agregar-tjug'){ const n=$('#ntj-n').value.trim(); if(!n) return alert('Poné el nombre.');
       let id=slug(n)||'jugador'; while(torneo().jugadores?.[id]) id+='2';
@@ -1523,20 +1521,14 @@ function statsTorneoJug(jugId){
   return {g,a,pj};
 }
 function cartaJugador(j, opts={}){
-  const st = j.st||{};
-  const barras = ATRIBUTOS.filter(([k])=>+st[k]>0).map(([k,t])=>{
-    const v = +st[k];
-    return `<div class="b"><span>${esc(t)}</span><span class="bar"><i style="width:${Math.min(100,v*10)}%"></i></span><span class="val">${v.toFixed(1)}</span></div>`;
-  }).join('');
   const tot = statsTorneoJug(j.id);
-  return `<div class="carta t-${esc(j.tier||'')}" style="--t:var(--t)">
+  return `<div class="carta t-${esc(j.tier||'')}">
     <div class="cab"><div>
         <div class="rol">${opts.capitan?'Capitán':'Jugador'}${j.puntoFuerte?' · '+esc(j.puntoFuerte):''}</div>
         <div class="nom">${esc(j.nombre)}</div>
         <div class="rol">${esc(j.discord||'')}</div>
       </div>
-      <div style="text-align:right"><div class="med">${(mediaEf(j)||0).toFixed(1)}</div>${tierBadge(j.tier)}</div></div>
-    ${barras?`<div class="barras">${barras}</div>`:''}
+      <div style="text-align:right"><div class="med">${esc(j.tier||'?')}</div></div></div>
     <div class="pie"><div><b>${tot.g}</b><span>Goles</span></div><div><b>${tot.a}</b><span>Asist.</span></div><div><b>${tot.pj}</b><span>Partidos</span></div></div>
   </div>`;
 }
