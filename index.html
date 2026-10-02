@@ -996,28 +996,56 @@ function rondasTodosContraTodos(ids){
 const mezclar = arr => arr.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
 const esperar = ms => new Promise(r=>setTimeout(r,ms));
 
+const clavePar = (a,b) => [a,b].sort().join('|');
+function puedeCompletar(restantes, jugados){
+  if (restantes.length < 2) return true;
+  const [x, ...resto] = restantes;
+  for (const y of resto){
+    if (jugados.has(clavePar(x,y))) continue;
+    if (puedeCompletar(resto.filter(z=>z!==y), jugados)) return true;
+  }
+  return false;
+}
+
+async function sortearUnPartido(){
+  const eqs = tEquiposArr(), n = eqs.length;
+  if (n < 2) { alert('Creá los equipos primero.'); return false; }
+  const porFecha = Math.floor(n/2), fechas = Math.max(1, +tConfig().fechas||4);
+  const ps = tPartidosArr();
+  const jugados = new Set(ps.map(x=>clavePar(x.a,x.b)));
+  let f = 1;
+  while (f <= fechas && ps.filter(x=>x.ronda==='Fecha '+f).length >= porFecha) f++;
+  if (f > fechas){ await ref('torneo/sorteo').set({estado:'terminado'}); return false; }
+  const enFecha = new Set(ps.filter(x=>x.ronda==='Fecha '+f).flatMap(x=>[x.a,x.b]));
+  const libres = mezclar(eqs.map(e=>e.id).filter(id=>!enFecha.has(id)));
+  if (libres.length < 2) return false;
+  const a = libres[0];
+  let cand = libres.slice(1).filter(y=>{
+    if (jugados.has(clavePar(a,y))) return false;
+    const resto = libres.filter(z=>z!==a && z!==y);
+    return puedeCompletar(resto, jugados);
+  });
+  if (!cand.length) cand = libres.slice(1);
+  await ref('torneo/sorteo').set({estado:'fixture', girandoVs:{fecha:f, a, candidatos:cand, hasta:Date.now()+3200}});
+  await esperar(3200);
+  const b = cand[Math.floor(Math.random()*cand.length)];
+  await db.ref('prime/torneo/partidos').push({a, b, ronda:'Fecha '+f, orden:ps.length});
+  await ref('torneo/sorteo').set({estado:'fixture'});
+  return true;
+}
+
 async function sortearFixture(){
   const eqs = tEquiposArr();
   if (eqs.length < 2) return alert('Creá los equipos primero.');
-  if (!confirm('Esto borra los partidos que haya y sortea el fixture de nuevo. ¿Seguimos?')) return;
-  const fechas = Math.max(1, +tConfig().fechas||4);
-  const rondas = mezclar(rondasTodosContraTodos(mezclar(eqs.map(e=>e.id)))).slice(0, fechas);
   await ref('torneo/partidos').remove();
-  let orden = 0;
-  for (let f=0; f<rondas.length; f++){
-    const pares = mezclar(rondas[f]);
-    const pendientes = new Set(pares.flat());
-    for (const [a,b] of pares){
-      const cand = [...pendientes].filter(x=>x!==a);
-      await ref('torneo/sorteo').set({estado:'fixture', girandoVs:{fecha:f+1, a, candidatos:cand, hasta:Date.now()+2600}});
-      await esperar(2600);
-      await db.ref('prime/torneo/partidos').push({a, b, ronda:'Fecha '+(f+1), orden:orden++});
-      pendientes.delete(a); pendientes.delete(b);
-      await ref('torneo/sorteo').set({estado:'fixture'});
-      await esperar(1100);
-    }
+  await esperar(400);
+  ADM.autoFx = true;
+  while (ADM.autoFx){
+    const sigue = await sortearUnPartido();
+    if (!sigue) break;
+    await esperar(1300);
   }
-  await ref('torneo/sorteo').set({estado:'terminado'});
+  ADM.autoFx = null;
   toast('Fixture sorteado');
 }
 
@@ -1032,8 +1060,13 @@ function admTFixture(){
       <input type="number" min="0" data-gb="${esc(x.id)}" value="${x.gb??''}" aria-label="Goles visitante"></div>
     <button class="btn danger sm" data-deltp="${esc(x.id)}">Quitar</button></div>`).join('');
   return `<div class="form" style="margin-bottom:14px"><h3 class="full">Sortear el fixture</h3>
-      <div class="full"><button class="btn" data-act="sortear-fixture">Sortear las fechas</button>
-      <p class="muted">Arma las ${esc(tConfig().fechas||4)} fechas al azar, sin repetir rivales, y las va revelando una por una en la página del sorteo.</p></div></div>
+      <div class="full btns" style="margin:0">
+        <button class="btn" data-act="sortear-uno">Sortear el próximo partido</button>
+        <button class="btn ghost" data-act="sortear-fixture">Sortear todo de corrido</button>
+        <button class="btn ghost" data-act="deshacer-partido">Deshacer el último</button>
+        <button class="btn danger" data-act="borrar-fixture">Borrar el fixture</button>
+      </div>
+      <p class="full muted">De a uno: cada vez que tocás, gira la ruleta y sale un cruce. Son ${esc(Math.floor((tEquiposArr().length||8)/2))} partidos por fecha y ${esc(tConfig().fechas||4)} fechas. Nadie repite rival.</p></div>
     <div class="form" style="margin-bottom:14px"><h3 class="full">Agregar partido a mano</h3>
       <label>Equipo A<select id="ntp-a">${ops}</select></label>
       <label>Equipo B<select id="ntp-b">${ops}</select></label>
@@ -1279,7 +1312,12 @@ document.addEventListener('click', async e=>{
     if (a==='sorteo-reiniciar'){ if(!confirm('¿Borrar todo el sorteo y empezar de cero?')) return;
       ADM.auto=null;
       await ref('torneo/picks').remove(); await ref('torneo/sorteo').set({estado:'pendiente'}); toast('Sorteo reiniciado'); render(); }
-    if (a==='sortear-fixture'){ await sortearFixture(); render(); }
+    if (a==='sortear-fixture'){ if(!confirm('Esto borra los partidos que haya y sortea todo de corrido. ¿Seguimos?')) return; await sortearFixture(); render(); }
+    if (a==='sortear-uno'){ const sigue = await sortearUnPartido(); if(!sigue) toast('El fixture ya está completo'); render(); }
+    if (a==='deshacer-partido'){ const ps=tPartidosArr(); if(!ps.length) return;
+      await ref('torneo/partidos/'+ps[ps.length-1].id).remove(); toast('Partido deshecho'); render(); }
+    if (a==='borrar-fixture'){ if(!confirm('¿Borrar todos los partidos del torneo?')) return;
+      await ref('torneo/partidos').remove(); await ref('torneo/sorteo').set({estado:'terminado'}); toast('Fixture borrado'); render(); }
     if (a==='agregar-tpartido'){ const A=$('#ntp-a').value, B=$('#ntp-b').value;
       if(!A||!B||A===B) return alert('Elegí dos equipos distintos.');
       await db.ref('prime/torneo/partidos').push({a:A,b:B,fecha:$('#ntp-fecha').value,hora:$('#ntp-hora').value,ronda:$('#ntp-ronda').value.trim()});
