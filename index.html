@@ -192,11 +192,22 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--silver)}
 .t-S{--t:#C4A2FF} .t-A{--t:#8FD9AE} .t-B{--t:#E5CE85} .t-C{--t:#E8A87A} .t-D{--t:#E8807A}
 .equipos{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
 .equipo{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--eq,var(--silver));border-radius:12px;padding:14px 16px}
-.equipo h3{margin-bottom:8px}
+.equipo h3{margin-bottom:8px;display:flex;align-items:center;gap:9px}
+.equipo h3 img{width:30px;height:30px;object-fit:contain;border-radius:6px}
+.eq-logo{width:46px;height:46px;object-fit:contain;border-radius:8px;border:1px solid var(--line)}
 .equipo ul{list-style:none;margin:0;padding:0;display:grid;gap:5px}
 .equipo li{display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid var(--line);padding-bottom:4px}
 .equipo li:last-child{border-bottom:0}
 .equipo li.vacio{color:var(--muted)}
+.camis{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;display:grid;gap:6px}
+.camis .fila{display:flex;align-items:center;gap:8px;font-size:.92rem}
+.camis .sw{display:flex;gap:2px}
+.camis .sw i{width:14px;height:16px;border-radius:3px;border:1px solid rgba(255,255,255,.3);display:block}
+.camis .n{color:var(--muted);min-width:78px}
+.camis button{all:unset;cursor:pointer;color:var(--muted);font-size:.85rem;text-decoration:underline}
+.camis button:hover{color:var(--text)}
+.bracket{display:grid;gap:10px;max-width:620px}
+.bracket .llave{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--silver);border-radius:10px;padding:10px 14px}
 .sorteo-vivo{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 28px;text-align:center}
 .sorteo-vivo .quien{font-family:var(--display);font-weight:900;font-size:clamp(2.2rem,7vw,4.4rem);line-height:1}
 .sorteo-vivo .donde{font-size:1.2rem;color:var(--silver);font-weight:600}
@@ -907,6 +918,8 @@ function admTorneo(){
       <label class="full">Nombre<input id="tc-nombre" value="${esc(c.nombre||'Torneo interno')}"></label>
       <label class="full">Descripción<input id="tc-desc" value="${esc(c.descripcion||'')}"></label>
       <label>Jugadores por equipo<input id="tc-cupo" type="number" min="2" value="${esc(c.porEquipo||5)}"></label>
+      <label>Fechas de la fase de grupos<input id="tc-fechas" type="number" min="1" max="7" value="${esc(c.fechas||4)}"></label>
+      <label class="full">Formato<textarea id="tc-formato" rows="4">${esc(c.formato||'')}</textarea></label>
       <div class="full"><button class="btn" data-act="guardar-tconfig">Guardar</button></div></div>`;
   }
   return nav + b;
@@ -934,10 +947,16 @@ function admTJugadores(){
 }
 function admTEquipos(){
   const eqs = tEquiposArr();
-  const filas = eqs.map(e=>`<div class="adm-row" style="--liga:${esc(e.color||'#C9CED6')}">
-    <div style="display:grid;grid-template-columns:1fr 70px;gap:8px;flex:1">
+  const filas = eqs.map(e=>`<div class="adm-row" style="--liga:${esc(e.color||'#C9CED6')};flex-wrap:wrap">
+    ${e.logo?`<img class="eq-logo" src="${esc(e.logo)}" alt="">`:''}
+    <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;flex:1;align-items:center">
       <input data-en="${esc(e.id)}" value="${esc(e.nombre)}" aria-label="Nombre del equipo">
-      <input data-ec="${esc(e.id)}" type="color" value="${esc(e.color||'#C9CED6')}" aria-label="Color"></div>
+      <input data-ec="${esc(e.id)}" type="color" value="${esc(e.color||'#C9CED6')}" aria-label="Color">
+      <input data-el="${esc(e.id)}" type="file" accept="image/*" aria-label="Escudo del equipo"></div>
+    <div style="display:grid;gap:6px;flex-basis:100%">
+      <input data-cam1="${esc(e.id)}" value="${esc(e.camiseta_titular||'')}" placeholder="/colors red 47 171717 FFFFFF ED0202 FFFFFF" aria-label="Camiseta titular">
+      <input data-cam2="${esc(e.id)}" value="${esc(e.camiseta_suplente||'')}" placeholder="Camiseta suplente" aria-label="Camiseta suplente">
+      <input data-cam3="${esc(e.id)}" value="${esc(e.camiseta_alternativa||'')}" placeholder="Camiseta alternativa" aria-label="Camiseta alternativa"></div>
     <button class="btn danger sm" data-delequipo="${esc(e.id)}">Quitar</button></div>`).join('');
   return `<div class="form" style="margin-bottom:14px"><label>Cuántos equipos crear<input id="ne-cant" type="number" min="2" max="8" value="6"></label>
       <div class="full"><button class="btn ghost" data-act="crear-equipos">Crear equipos vacíos</button>
@@ -963,6 +982,45 @@ function admTSorteo(){
     </div></div>
     <section><h2>Cómo va</h2>${pageTorneoEquipos()}</section>`;
 }
+function rondasTodosContraTodos(ids){
+  const t = [...ids]; if (t.length%2) t.push(null);
+  const n = t.length, rondas = [];
+  for (let r=0;r<n-1;r++){
+    const pares = [];
+    for (let i=0;i<n/2;i++){ const a=t[i], b=t[n-1-i]; if(a&&b) pares.push(r%2 ? [b,a] : [a,b]); }
+    rondas.push(pares);
+    t.splice(1,0,t.pop());
+  }
+  return rondas;
+}
+const mezclar = arr => arr.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+const esperar = ms => new Promise(r=>setTimeout(r,ms));
+
+async function sortearFixture(){
+  const eqs = tEquiposArr();
+  if (eqs.length < 2) return alert('Creá los equipos primero.');
+  if (!confirm('Esto borra los partidos que haya y sortea el fixture de nuevo. ¿Seguimos?')) return;
+  const fechas = Math.max(1, +tConfig().fechas||4);
+  const rondas = mezclar(rondasTodosContraTodos(mezclar(eqs.map(e=>e.id)))).slice(0, fechas);
+  await ref('torneo/partidos').remove();
+  let orden = 0;
+  for (let f=0; f<rondas.length; f++){
+    const pares = mezclar(rondas[f]);
+    const pendientes = new Set(pares.flat());
+    for (const [a,b] of pares){
+      const cand = [...pendientes].filter(x=>x!==a);
+      await ref('torneo/sorteo').set({estado:'fixture', girandoVs:{fecha:f+1, a, candidatos:cand, hasta:Date.now()+2600}});
+      await esperar(2600);
+      await db.ref('prime/torneo/partidos').push({a, b, ronda:'Fecha '+(f+1), orden:orden++});
+      pendientes.delete(a); pendientes.delete(b);
+      await ref('torneo/sorteo').set({estado:'fixture'});
+      await esperar(1100);
+    }
+  }
+  await ref('torneo/sorteo').set({estado:'terminado'});
+  toast('Fixture sorteado');
+}
+
 function admTFixture(){
   const eqs = tEquiposArr(), ps = tPartidosArr();
   const ops = eqs.map(e=>opt(e.id,e.nombre,'')).join('');
@@ -973,7 +1031,10 @@ function admTFixture(){
       <input type="number" min="0" data-ga="${esc(x.id)}" value="${x.ga??''}" aria-label="Goles local">
       <input type="number" min="0" data-gb="${esc(x.id)}" value="${x.gb??''}" aria-label="Goles visitante"></div>
     <button class="btn danger sm" data-deltp="${esc(x.id)}">Quitar</button></div>`).join('');
-  return `<div class="form" style="margin-bottom:14px"><h3 class="full">Agregar partido</h3>
+  return `<div class="form" style="margin-bottom:14px"><h3 class="full">Sortear el fixture</h3>
+      <div class="full"><button class="btn" data-act="sortear-fixture">Sortear las fechas</button>
+      <p class="muted">Arma las ${esc(tConfig().fechas||4)} fechas al azar, sin repetir rivales, y las va revelando una por una en la página del sorteo.</p></div></div>
+    <div class="form" style="margin-bottom:14px"><h3 class="full">Agregar partido a mano</h3>
       <label>Equipo A<select id="ntp-a">${ops}</select></label>
       <label>Equipo B<select id="ntp-b">${ops}</select></label>
       <label>Día<input id="ntp-fecha" type="date"></label>
@@ -1020,6 +1081,22 @@ function admTablas(){
 const ref = path => db.ref(path ? 'prime/'+path : 'prime');
 function toast(t){ const el=document.createElement('div'); el.className='toast'; el.textContent=t; document.body.appendChild(el); setTimeout(()=>el.remove(),2200); }
 const fail = e => { console.error(e); alert('No se pudo guardar: '+(e.message||e)); };
+
+function achicarImagen(file, lado=128){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = () => { const im = new Image();
+      im.onload = () => { const c = document.createElement('canvas'); c.width = c.height = lado;
+        const ctx = c.getContext('2d'); const esc2 = Math.min(lado/im.width, lado/im.height);
+        const w = im.width*esc2, h = im.height*esc2;
+        ctx.drawImage(im, (lado-w)/2, (lado-h)/2, w, h);
+        res(c.toDataURL('image/webp', 0.85)); };
+      im.onerror = () => rej(new Error('No se pudo leer la imagen'));
+      im.src = r.result; };
+    r.onerror = () => rej(new Error('No se pudo leer el archivo'));
+    r.readAsDataURL(file);
+  });
+}
 
 function fileB64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(',')[1]); r.onerror=()=>rej(new Error('No se pudo leer el archivo')); r.readAsDataURL(file); }); }
 
@@ -1102,6 +1179,7 @@ document.addEventListener('click', async e=>{
   if (t.dataset.informe){ t.disabled=true; try{ await verInforme(t.dataset.informe); } catch(err){ alert('No se pudo abrir el informe: '+err.message); } t.disabled=false; return; }
   if (t.dataset.informeDl){ t.disabled=true; try{ await bajarInforme(t.dataset.informeDl); } catch(err){ alert('No se pudo descargar: '+err.message); } t.disabled=false; return; }
   if (t.dataset.replay){ t.disabled=true; try{ await bajarReplay(t.dataset.replay); } catch(err){ alert('No se pudo descargar: '+err.message); } t.disabled=false; return; }
+  if (t.dataset.copiar){ try { await navigator.clipboard.writeText(t.dataset.copiar); toast('Comando copiado'); } catch(err){ alert(t.dataset.copiar); } return; }
   if (t.dataset.tsub){ ADM.tsub=t.dataset.tsub; return render(); }
   if (t.dataset.deltjug){ if(confirm('¿Quitar este jugador del torneo?')){ await ref('torneo/jugadores/'+t.dataset.deltjug).remove(); toast('Jugador quitado'); } return; }
   if (t.dataset.delequipo){ if(confirm('¿Quitar este equipo?')){ await ref('torneo/equipos/'+t.dataset.delequipo).remove(); toast('Equipo quitado'); } return; }
@@ -1179,10 +1257,15 @@ document.addEventListener('click', async e=>{
       for(let i=1;i<=cant;i++) up['torneo/equipos/eq'+i]={nombre:'Equipo '+i, color:COLORES[(i-1)%COLORES.length], orden:i};
       await ref('').update(up); toast('Equipos creados'); render(); }
     if (a==='guardar-equipos'){ const up={};
-      document.querySelectorAll('[data-en]').forEach(i=>{ const id=i.dataset.en;
+      for (const i of document.querySelectorAll('[data-en]')){ const id=i.dataset.en;
         up[`torneo/equipos/${id}/nombre`]=i.value.trim();
-        up[`torneo/equipos/${id}/color`]=document.querySelector(`[data-ec="${id}"]`).value; });
-      await ref('').update(up); toast('Equipos guardados'); }
+        up[`torneo/equipos/${id}/color`]=document.querySelector(`[data-ec="${id}"]`).value;
+        const f = document.querySelector(`[data-el="${id}"]`)?.files?.[0];
+        if (f) up[`torneo/equipos/${id}/logo`] = await achicarImagen(f);
+        up[`torneo/equipos/${id}/camiseta_titular`]=document.querySelector(`[data-cam1="${id}"]`).value.trim();
+        up[`torneo/equipos/${id}/camiseta_suplente`]=document.querySelector(`[data-cam2="${id}"]`).value.trim();
+        up[`torneo/equipos/${id}/camiseta_alternativa`]=document.querySelector(`[data-cam3="${id}"]`).value.trim(); }
+      await ref('').update(up); toast('Equipos guardados'); render(); }
     if (a==='sorteo-empezar'){ await ref('torneo/sorteo').update({estado:'corriendo'}); toast('Sorteo en vivo'); }
     if (a==='sorteo-siguiente'){ await ref('torneo/sorteo').update({estado:'corriendo'}); await sorteoSiguiente(); }
     if (a==='sorteo-auto'){
@@ -1196,6 +1279,7 @@ document.addEventListener('click', async e=>{
     if (a==='sorteo-reiniciar'){ if(!confirm('¿Borrar todo el sorteo y empezar de cero?')) return;
       ADM.auto=null;
       await ref('torneo/picks').remove(); await ref('torneo/sorteo').set({estado:'pendiente'}); toast('Sorteo reiniciado'); render(); }
+    if (a==='sortear-fixture'){ await sortearFixture(); render(); }
     if (a==='agregar-tpartido'){ const A=$('#ntp-a').value, B=$('#ntp-b').value;
       if(!A||!B||A===B) return alert('Elegí dos equipos distintos.');
       await db.ref('prime/torneo/partidos').push({a:A,b:B,fecha:$('#ntp-fecha').value,hora:$('#ntp-hora').value,ronda:$('#ntp-ronda').value.trim()});
@@ -1206,7 +1290,7 @@ document.addEventListener('click', async e=>{
         up[`torneo/partidos/${id}/gb`] = gb===''?null:+gb; });
       await ref('').update(up); toast('Resultados guardados'); }
     if (a==='guardar-treglas'){ await ref('torneo/reglas').set($('#t-reglas').value.trim()||null); toast('Reglas guardadas'); }
-    if (a==='guardar-tconfig'){ await ref('torneo/config').update({nombre:$('#tc-nombre').value.trim(), descripcion:$('#tc-desc').value.trim(), porEquipo:+$('#tc-cupo').value||5});
+    if (a==='guardar-tconfig'){ await ref('torneo/config').update({nombre:$('#tc-nombre').value.trim(), descripcion:$('#tc-desc').value.trim(), porEquipo:+$('#tc-cupo').value||5, fechas:+$('#tc-fechas').value||4, formato:$('#tc-formato').value.trim()});
       toast('Datos guardados'); }
     if (a==='guardar-tabla'){ const v=document.querySelector(`[data-tabla="${t.dataset.id}"]`).value.trim(); await ref('tablas/'+t.dataset.id).set(v||null); toast('Tabla guardada'); }
   } catch(err){ if(a==='login'||a==='login-google'){ const el=$('#lg-err'); if(el) el.textContent='No se pudo entrar: revisá el email y la contraseña.'; } else fail(err); }
@@ -1220,7 +1304,7 @@ const tConfig = () => torneo().config || {};
 const tJugsArr = () => Object.entries(torneo().jugadores||{}).map(([id,j])=>({id,...j})).sort((a,b)=>tRank(a.tier)-tRank(b.tier)||a.nombre.localeCompare(b.nombre));
 const tEquiposArr = () => Object.entries(torneo().equipos||{}).map(([id,e])=>({id,...e})).sort((a,b)=>(a.orden||0)-(b.orden||0));
 const tPicksArr = () => Object.entries(torneo().picks||{}).map(([id,x])=>({id,...x})).sort((a,b)=>(a.ts||0)-(b.ts||0));
-const tPartidosArr = () => Object.entries(torneo().partidos||{}).map(([id,x])=>({id,...x})).sort((a,b)=>(a.fecha+a.hora > b.fecha+b.hora ? 1 : -1));
+const tPartidosArr = () => Object.entries(torneo().partidos||{}).map(([id,x])=>({id,...x})).sort((a,b)=>(a.orden??999)-(b.orden??999) || ((a.fecha||'')+(a.hora||'') > (b.fecha||'')+(b.hora||'') ? 1 : -1));
 const tJug = id => (torneo().jugadores||{})[id] || {nombre:id, tier:''};
 const tierBadge = t => `<span class="tier t-${esc(t||'')}">${esc(t||'?')}</span>`;
 const sinTier = () => tJugsArr().filter(j=>!j.tier);
@@ -1239,6 +1323,18 @@ function bombosTorneo(){
 }
 const capitanes = () => bombosTorneo()[0] || [];
 const esCapitan = id => capitanes().some(j=>j.id===id);
+const coloresDe = cmd => (String(cmd||'').match(/\b[0-9A-Fa-f]{6}\b/g)||[]);
+function camisetasHtml(e){
+  const defs = [['titular','Titular'],['suplente','Suplente'],['alternativa','Alternativa']];
+  const filas = defs.map(([k,t])=>{
+    const cmd = e['camiseta_'+k]; if(!cmd) return '';
+    const cols = coloresDe(cmd);
+    return `<div class="fila"><span class="n">${t}</span>
+      <span class="sw">${cols.map(c=>`<i style="background:#${esc(c)}"></i>`).join('')}</span>
+      <button data-copiar="${esc(cmd)}">copiar</button></div>`;
+  }).filter(Boolean).join('');
+  return filas ? `<div class="camis">${filas}</div>` : '';
+}
 function plantelesSorteo(){
   const eq = {}; tEquiposArr().forEach(e=>eq[e.id]=[]);
   tPicksArr().forEach(p=>{ if(eq[p.equipo]) eq[p.equipo].push(p.jugador); });
@@ -1297,7 +1393,7 @@ function pageTorneoEquipos(){
     const ids = pl[e.id]||[];
     const filas = ids.map(id=>`<li><span>${esc(tJug(id).nombre)}${esCapitan(id)?' <span class="tag">C</span>':''}</span>${tierBadge(tJug(id).tier)}</li>`).join('')
       + Array.from({length:Math.max(0,cupo-ids.length)},()=>`<li class="vacio"><span>Libre</span></li>`).join('');
-    return `<div class="equipo" style="--eq:${esc(e.color||'#C9CED6')}"><h3>${esc(e.nombre)}</h3><ul>${filas}</ul></div>`;
+    return `<div class="equipo" style="--eq:${esc(e.color||'#C9CED6')}"><h3>${e.logo?`<img src="${esc(e.logo)}" alt="">`:''}${esc(e.nombre)}</h3><ul>${filas}</ul>${camisetasHtml(e)}</div>`;
   }).join('')}</div>`;
 }
 function pageTorneoSorteo(){
@@ -1308,12 +1404,22 @@ function pageTorneoSorteo(){
   const gir = s.girando && Date.now() < (s.girando.hasta||0)+1500 ? s.girando : null;
   const cab = s.estado==='corriendo' ? '<p class="vivo"><i></i>Sorteo en vivo, se actualiza solo</p>'
     : s.estado==='terminado' ? '<p class="muted">El sorteo terminó.</p>' : '<p class="muted">El sorteo todavía no empezó. Cuando arranque, esta página se actualiza sola.</p>';
+  const gvs = s.girandoVs && Date.now() < (s.girandoVs.hasta||0)+1500 ? s.girandoVs : null;
   let vivo = '';
-  if (gir){
+  if (gvs){
+    const eq = torneo().equipos||{};
+    const nombres = (gvs.candidatos||[]).map(id=>eq[id]?.nombre||'?');
+    vivo = `<div class="sorteo-vivo girando">
+      <div class="muted">Fecha ${esc(gvs.fecha)}, rival de</div>
+      <div class="donde">${eq[gvs.a]?.logo?`<img class="eq-logo" src="${esc(eq[gvs.a].logo)}" alt="" style="vertical-align:-12px;margin-right:8px">`:''}${esc(eq[gvs.a]?.nombre||'?')}</div>
+      <div class="quien" id="ruleta" data-nombres='${esc(JSON.stringify(nombres))}'>${esc(nombres[0]||'…')}</div>
+    </div>`;
+    setTimeout(()=>{ if(route().a==='torneo') render(); }, Math.max(400, gvs.hasta-Date.now()+1600));
+  } else if (gir){
     const nombres = (gir.candidatos||[]).map(id=>tJug(id).nombre);
     vivo = `<div class="sorteo-vivo girando">
       <div class="muted">Girando para</div>
-      <div class="donde">${esc((torneo().equipos||{})[gir.equipo]?.nombre||'?')}</div>
+      <div class="donde">${(torneo().equipos||{})[gir.equipo]?.logo?`<img class="eq-logo" src="${esc((torneo().equipos||{})[gir.equipo].logo)}" alt="" style="vertical-align:-12px;margin-right:8px">`:''}${esc((torneo().equipos||{})[gir.equipo]?.nombre||'?')}</div>
       <div class="quien" id="ruleta" data-nombres='${esc(JSON.stringify(nombres))}'>${esc(nombres[0]||'…')}</div>
       <div class="ruleta-sub">${nombres.length} en el bombo</div>
     </div>`;
@@ -1338,6 +1444,7 @@ function pageTorneoSorteo(){
     <section><h2>Bombos</h2>${bombos||'<p class="muted">No queda nadie sin elegir.</p>'}
       ${sin.length?`<div class="aviso" style="margin-top:10px">Sin tier, no entran al sorteo: ${esc(sin.map(j=>j.nombre).join(', '))}</div>`:''}</section>
     <section><h2>Equipos</h2>${pageTorneoEquipos()}</section>
+    ${tPartidosArr().length?`<section><h2>Fixture sorteado</h2>${fixtureHtml()}</section>`:''}
     ${picks.length?`<section><h2>Orden del sorteo</h2><div class="scroll"><table class="tabla"><thead><tr><th>#</th><th class="l">Jugador</th><th class="l">Equipo</th></tr></thead><tbody>${
       picks.map((p,i)=>`<tr><td>${i+1}</td><td class="l">${esc(tJug(p.jugador).nombre)} ${tierBadge(tJug(p.jugador).tier)}</td><td class="l">${esc((torneo().equipos||{})[p.equipo]?.nombre||'?')}</td></tr>`).join('')
     }</tbody></table></div></section>`:''}`;
@@ -1347,17 +1454,38 @@ function cardTorneo(x){
   const jugado = x.ga!==undefined && x.ga!==null && x.ga!=='';
   const centro = jugado ? `<span class="marcador">${esc(x.ga)}–${esc(x.gb)}</span>` : `<span class="hora">${esc(x.hora||'')}</span>`;
   const f = x.fecha ? fCorta({fecha:x.fecha,hora:x.hora||'00:00'}) : 'A confirmar';
+  const logo = id => eq[id]?.logo ? `<img src="${esc(eq[id].logo)}" alt="" style="width:26px;height:26px;object-fit:contain;vertical-align:-7px;margin:0 6px">` : '';
   return `<article class="partido" style="--liga:var(--silver)">
-    <div class="meta"><span>${esc(f)}</span>${x.ronda?`<span>${esc(x.ronda)}</span>`:''}</div>
-    <div class="enf"><span class="eq">${esc(eq[x.a]?.nombre||'?')}</span>${centro}<span class="eq">${esc(eq[x.b]?.nombre||'?')}</span></div>
+    <div class="meta">${x.fecha?`<span>${esc(f)}</span>`:''}${x.ronda?`<span>${esc(x.ronda)}</span>`:''}</div>
+    <div class="enf"><span class="eq">${logo(x.a)}${esc(eq[x.a]?.nombre||'?')}</span>${centro}<span class="eq">${esc(eq[x.b]?.nombre||'?')}${logo(x.b)}</span></div>
   </article>`;
+}
+function fixtureHtml(){
+  const ps = tPartidosArr();
+  if (!ps.length) return '<p class="muted">Todavía no hay partidos.</p>';
+  const porFecha = {};
+  ps.forEach(x=>{ (porFecha[x.ronda||'Sin fecha'] ||= []).push(x); });
+  return Object.entries(porFecha).map(([r,lista])=>`<h3 style="margin:16px 0 8px">${esc(r)}</h3><div class="lista">${lista.map(cardTorneo).join('')}</div>`).join('');
+}
+function llavesHtml(){
+  const tb = tablaTorneo().filter(r=>r.pj>0);
+  const n = x => tb[x] ? tb[x].nombre : `${x+1}º de la tabla`;
+  return `<div class="bracket">
+    <div class="llave"><b>Semifinal 1</b><br>${esc(n(0))} vs ${esc(n(3))}</div>
+    <div class="llave"><b>Semifinal 2</b><br>${esc(n(1))} vs ${esc(n(2))}</div>
+    <div class="llave"><b>Final</b><br>Ganadores de las semis</div>
+  </div>`;
 }
 function pageTorneoFixture(){
   const ps = tPartidosArr(), tb = tablaTorneo();
   const tabla = tb.length ? `<div class="scroll"><table class="tabla"><thead><tr><th>#</th><th class="l">Equipo</th><th>Pts</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th></tr></thead><tbody>${
     tb.map((r,i)=>`<tr><td>${i+1}</td><td class="l">${esc(r.nombre)}</td><td><b>${r.pts}</b></td><td>${r.pj}</td><td>${r.g}</td><td>${r.e}</td><td>${r.p}</td><td>${r.gf}</td><td>${r.gc}</td><td>${r.gf-r.gc>0?'+':''}${r.gf-r.gc}</td></tr>`).join('')}</tbody></table></div>` : '';
-  return `${ps.length?`<section><h2>Partidos</h2><div class="lista">${ps.map(cardTorneo).join('')}</div></section>`:'<p class="muted">Todavía no hay partidos cargados.</p>'}
-    ${tabla?`<section><h2>Posiciones</h2>${tabla}</section>`:''}`;
+  const c = tConfig();
+  const formato = c.formato || `Los ${esc(tEquiposArr().length||8)} equipos juegan todos en el mismo grupo, ${esc(c.fechas||4)} fechas. Clasifican los primeros 4: semifinales 1º contra 4º y 2º contra 3º, y después la final. Los partidos son a dos tiempos de 7 minutos.`;
+  return `<div class="texto" style="white-space:pre-wrap">${esc(formato)}</div>
+    <section><h2>Partidos</h2>${fixtureHtml()}</section>
+    ${tabla?`<section><h2>Posiciones</h2>${tabla}</section>`:''}
+    <section><h2>Playoffs</h2>${llavesHtml()}</section>`;
 }
 function pageTorneoReglas(){
   const t = (torneo().reglas||'').trim();
