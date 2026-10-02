@@ -1510,8 +1510,9 @@ function pageTorneo(sub){
   if (sub==='reglas') return headerTorneo(sub)+pageTorneoReglas();
   const js = tJugsArr(), eqs = tEquiposArr(), picks = tPicksArr(), st = (torneo().sorteo||{}).estado||'pendiente';
   const falta = sinTier();
-  const estado = st==='corriendo' ? '<span class="vivo"><i></i>Sorteo en vivo</span>'
-    : st==='terminado' ? 'Equipos sorteados' : 'Sorteo pendiente';
+  const completo = eqs.length && picks.length >= eqs.length * (+tConfig().porEquipo||4);
+  const estado = (st==='corriendo' || st==='fixture') && !completo ? '<span class="vivo"><i></i>Sorteo en vivo</span>'
+    : (completo || st==='terminado') ? 'Equipos sorteados' : 'Sorteo pendiente';
   const prox = tPartidosArr().filter(x=>x.ga===undefined||x.ga===null||x.ga==='').slice(0,3);
   return headerTorneo(sub) + `
     <div class="datos">
