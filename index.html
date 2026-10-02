@@ -206,6 +206,16 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--silver)}
 .camis .n{color:var(--muted);min-width:78px}
 .camis button{all:unset;cursor:pointer;color:var(--muted);font-size:.85rem;text-decoration:underline}
 .camis button:hover{color:var(--text)}
+.vs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;margin-top:6px}
+.vs .lado{display:grid;justify-items:center;gap:8px;min-width:0}
+.vs .lado img{width:84px;height:84px;object-fit:contain}
+.vs .lado .nom{font-family:var(--display);font-weight:900;font-size:clamp(1.4rem,3.4vw,2.6rem);line-height:1.05;text-align:center;overflow-wrap:anywhere}
+.vs .uve{font-family:var(--display);font-weight:900;font-size:clamp(1.6rem,4vw,3rem);color:var(--muted)}
+.vs .lado.incognita .nom{color:var(--warn)}
+.vs .lado.incognita .sombra{width:84px;height:84px;border-radius:14px;border:2px dashed var(--warn);display:grid;place-items:center;font-family:var(--display);font-size:2.6rem;color:var(--warn)}
+.fecha-bloque{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:18px}
+.fecha-bloque h3{margin:0 0 12px;font-size:1.5rem}
+.fecha-bloque .lista{gap:8px}
 .bracket{display:grid;gap:10px;max-width:620px}
 .bracket .llave{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--silver);border-radius:10px;padding:10px 14px}
 .sorteo-vivo{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 28px;text-align:center}
@@ -1029,7 +1039,7 @@ async function sortearUnPartido(){
   await ref('torneo/sorteo').set({estado:'fixture', girandoVs:{fecha:f, a, candidatos:cand, hasta:Date.now()+3200}});
   await esperar(3200);
   const b = cand[Math.floor(Math.random()*cand.length)];
-  await db.ref('prime/torneo/partidos').push({a, b, ronda:'Fecha '+f, orden:ps.length});
+  await db.ref('prime/torneo/partidos').push({a, b, ronda:'Fecha '+f, orden:ps.length, ts:Date.now()});
   await ref('torneo/sorteo').set({estado:'fixture'});
   return true;
 }
@@ -1444,21 +1454,36 @@ function pageTorneoSorteo(){
     : s.estado==='terminado' ? '<p class="muted">El sorteo terminó.</p>' : '<p class="muted">El sorteo todavía no empezó. Cuando arranque, esta página se actualiza sola.</p>';
   const gvs = s.girandoVs && Date.now() < (s.girandoVs.hasta||0)+1500 ? s.girandoVs : null;
   let vivo = '';
+  const ultPartido = tPartidosArr().slice(-1)[0];
+  const reciénCruce = ultPartido && Date.now() - (ultPartido.ts||0) < 6000;
   if (gvs){
     const eq = torneo().equipos||{};
     const nombres = (gvs.candidatos||[]).map(id=>eq[id]?.nombre||'?');
     vivo = `<div class="sorteo-vivo girando">
-      <div class="muted">Fecha ${esc(gvs.fecha)}, rival de</div>
-      <div class="donde">${eq[gvs.a]?.logo?`<img class="eq-logo" src="${esc(eq[gvs.a].logo)}" alt="" style="vertical-align:-12px;margin-right:8px">`:''}${esc(eq[gvs.a]?.nombre||'?')}</div>
-      <div class="quien" id="ruleta" data-nombres='${esc(JSON.stringify(nombres))}'>${esc(nombres[0]||'…')}</div>
+      <div class="muted">Fecha ${esc(gvs.fecha)}</div>
+      <div class="vs">
+        <div class="lado">${eq[gvs.a]?.logo?`<img src="${esc(eq[gvs.a].logo)}" alt="">`:''}<div class="nom">${esc(eq[gvs.a]?.nombre||'?')}</div></div>
+        <div class="uve">vs</div>
+        <div class="lado incognita"><div class="sombra">?</div>
+          <div class="nom" id="ruleta" data-hasta="${esc(gvs.hasta)}" data-nombres='${esc(JSON.stringify(nombres))}'>${esc(nombres[0]||'…')}</div></div>
+      </div>
+      <div class="ruleta-sub">${nombres.length} rivales posibles</div>
     </div>`;
-    setTimeout(()=>{ if(route().a==='torneo') render(); }, Math.max(400, gvs.hasta-Date.now()+1600));
+    setTimeout(()=>{ if(route().a==='torneo') render(); }, Math.max(400, gvs.hasta-Date.now()+1200));
+  } else if (reciénCruce){
+    const eq = torneo().equipos||{};
+    const lado = id => `<div class="lado">${eq[id]?.logo?`<img src="${esc(eq[id].logo)}" alt="">`:''}<div class="nom">${esc(eq[id]?.nombre||'?')}</div></div>`;
+    vivo = `<div class="sorteo-vivo nuevo">
+      <div class="muted">${esc(ultPartido.ronda||'')}</div>
+      <div class="vs">${lado(ultPartido.a)}<div class="uve">vs</div>${lado(ultPartido.b)}</div>
+    </div>`;
+    setTimeout(()=>{ if(route().a==='torneo') render(); }, 6200);
   } else if (gir){
     const nombres = (gir.candidatos||[]).map(id=>tJug(id).nombre);
     vivo = `<div class="sorteo-vivo girando">
       <div class="muted">Girando para</div>
       <div class="donde">${(torneo().equipos||{})[gir.equipo]?.logo?`<img class="eq-logo" src="${esc((torneo().equipos||{})[gir.equipo].logo)}" alt="" style="vertical-align:-12px;margin-right:8px">`:''}${esc((torneo().equipos||{})[gir.equipo]?.nombre||'?')}</div>
-      <div class="quien" id="ruleta" data-nombres='${esc(JSON.stringify(nombres))}'>${esc(nombres[0]||'…')}</div>
+      <div class="quien" id="ruleta" data-hasta="${esc(gir.hasta)}" data-nombres='${esc(JSON.stringify(nombres))}'>${esc(nombres[0]||'…')}</div>
       <div class="ruleta-sub">${nombres.length} en el bombo</div>
     </div>`;
     setTimeout(()=>{ if(route().a==='torneo') render(); }, Math.max(400, gir.hasta-Date.now()+1600));
@@ -1487,14 +1512,14 @@ function pageTorneoSorteo(){
       picks.map((p,i)=>`<tr><td>${i+1}</td><td class="l">${esc(tJug(p.jugador).nombre)} ${tierBadge(tJug(p.jugador).tier)}</td><td class="l">${esc((torneo().equipos||{})[p.equipo]?.nombre||'?')}</td></tr>`).join('')
     }</tbody></table></div></section>`:''}`;
 }
-function cardTorneo(x){
+function cardTorneo(x, conRonda=true){
   const eq = torneo().equipos||{};
   const jugado = x.ga!==undefined && x.ga!==null && x.ga!=='';
   const centro = jugado ? `<span class="marcador">${esc(x.ga)}–${esc(x.gb)}</span>` : `<span class="hora">${esc(x.hora||'')}</span>`;
   const f = x.fecha ? fCorta({fecha:x.fecha,hora:x.hora||'00:00'}) : 'A confirmar';
   const logo = id => eq[id]?.logo ? `<img src="${esc(eq[id].logo)}" alt="" style="width:26px;height:26px;object-fit:contain;vertical-align:-7px;margin:0 6px">` : '';
   return `<article class="partido" style="--liga:var(--silver)">
-    <div class="meta">${x.fecha?`<span>${esc(f)}</span>`:''}${x.ronda?`<span>${esc(x.ronda)}</span>`:''}</div>
+    ${x.fecha||(conRonda&&x.ronda)?`<div class="meta">${x.fecha?`<span>${esc(f)}</span>`:''}${conRonda&&x.ronda?`<span>${esc(x.ronda)}</span>`:''}</div>`:''}
     <div class="enf"><span class="eq">${logo(x.a)}${esc(eq[x.a]?.nombre||'?')}</span>${centro}<span class="eq">${esc(eq[x.b]?.nombre||'?')}${logo(x.b)}</span></div>
   </article>`;
 }
@@ -1503,7 +1528,7 @@ function fixtureHtml(){
   if (!ps.length) return '<p class="muted">Todavía no hay partidos.</p>';
   const porFecha = {};
   ps.forEach(x=>{ (porFecha[x.ronda||'Sin fecha'] ||= []).push(x); });
-  return Object.entries(porFecha).map(([r,lista])=>`<h3 style="margin:16px 0 8px">${esc(r)}</h3><div class="lista">${lista.map(cardTorneo).join('')}</div>`).join('');
+  return Object.entries(porFecha).map(([r,lista])=>`<div class="fecha-bloque"><h3>${esc(r)}</h3><div class="lista">${lista.map(x=>cardTorneo(x,false)).join('')}</div></div>`).join('');
 }
 function llavesHtml(){
   const tb = tablaTorneo().filter(r=>r.pj>0);
@@ -1560,6 +1585,7 @@ function render(){
   else html = pagePortal();
   $('#app').innerHTML = html;
   tick();
+  girarRuleta();
 }
 function tick(){
   const now = Date.now();
@@ -1567,10 +1593,23 @@ function tick(){
   document.querySelectorAll('[data-cdbox]').forEach(el=>{ const ms=+el.dataset.cdbox-now; el.classList.toggle('urg', ms>0 && ms<3*3600e3); });
 }
 setInterval(tick, 30000);
-setInterval(()=>{ const el = document.getElementById('ruleta'); if(!el) return;
-  let n = []; try { n = JSON.parse(el.dataset.nombres||'[]'); } catch(e){}
-  if (n.length) el.textContent = n[Math.floor(Math.random()*n.length)];
-}, 90);
+function girarRuleta(){
+  const el = document.getElementById('ruleta');
+  if (!el || el.dataset.girando === '1') return;
+  let nombres = []; try { nombres = JSON.parse(el.dataset.nombres||'[]'); } catch(e){}
+  if (!nombres.length) return;
+  el.dataset.girando = '1';
+  const hasta = +el.dataset.hasta || (Date.now()+2500);
+  let i = Math.floor(Math.random()*nombres.length);
+  (function paso(){
+    if (!document.body.contains(el)) return;
+    const falta = hasta - Date.now();
+    if (falta <= 0) return;
+    i = (i+1) % nombres.length;
+    el.textContent = nombres[i];
+    setTimeout(paso, falta > 1500 ? 70 : falta > 800 ? 150 : 300);
+  })();
+}
 window.addEventListener('hashchange', ()=>{ if(!location.hash.startsWith('#/admin')) ADM.edit=null; window.scrollTo(0,0); render(); });
 
 /* ---------- arranque ---------- */
