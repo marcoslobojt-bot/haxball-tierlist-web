@@ -257,6 +257,23 @@ table.tabla{width:100%;border-collapse:collapse;font-size:.97rem}
 .camis button{all:unset;cursor:pointer;color:var(--muted);font-size:.84rem;text-decoration:underline}
 .camis button:hover{color:var(--text)}
 
+/* partido del torneo */
+.marcador-gde{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;
+  background:linear-gradient(160deg,#161B24 0%,#0A0D12 72%);border:1px solid var(--line);border-radius:20px;padding:30px 28px;box-shadow:var(--sombra)}
+.marcador-gde .lado{display:grid;justify-items:center;gap:12px}
+.marcador-gde .lado img{width:92px;height:92px;object-fit:contain}
+.marcador-gde .lado a{text-decoration:none;font-family:var(--display);font-weight:900;font-size:clamp(1.3rem,3vw,2.2rem);text-align:center;line-height:1.05}
+.marcador-gde .res{font-family:var(--display);font-weight:900;font-size:clamp(2.6rem,7vw,4.4rem);line-height:1;white-space:nowrap}
+.linea{display:grid;gap:10px;max-width:640px}
+.ev{display:grid;grid-template-columns:62px 1fr;gap:14px;align-items:center;background:linear-gradient(160deg,#141821 0%,#0C0F14 75%);
+  border:1px solid var(--line);border-left:3px solid var(--eq,var(--acento));border-radius:12px;padding:12px 16px}
+.ev .min{font-family:var(--display);font-weight:900;font-size:1.5rem;color:var(--acento);text-align:center}
+.ev .as{color:var(--muted);font-size:.93rem}
+.mvp{display:flex;align-items:center;gap:16px;background:linear-gradient(160deg,#20222B 0%,#0C0F14 72%);
+  border:1px solid var(--warn);border-radius:16px;padding:18px 22px;max-width:460px}
+.mvp .et{color:var(--warn);text-transform:uppercase;letter-spacing:.16em;font-size:.76rem;font-weight:700}
+.mvp .nm{font-family:var(--display);font-weight:900;font-size:2rem;line-height:1}
+.ev-fila{display:grid;grid-template-columns:80px 1fr 1fr 40px;gap:8px;align-items:center;margin-bottom:8px}
 /* cartas de jugador */
 .cartas{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:18px}
 .carta{position:relative;overflow:hidden;background:linear-gradient(165deg,#1A1F28 0%,#0A0D12 72%);
@@ -1181,6 +1198,14 @@ async function sortearFixture(){
   toast('Fixture sorteado');
 }
 
+function filaEvento(jug, eq, e={}){
+  return `<div class="ev-fila" data-ev>
+    <input type="number" min="0" data-emin value="${esc(e.min??'')}" aria-label="Minuto">
+    <select data-eg aria-label="Goleador"><option value="">—</option>${jug.map(j=>opt(j.id,j.nombre+' ('+(eq[j.eq]?.nombre||'')+')',e.g||'')).join('')}</select>
+    <select data-ea aria-label="Asistencia"><option value="">Sin asistencia</option>${jug.map(j=>opt(j.id,j.nombre,e.a||'')).join('')}</select>
+    <button class="btn danger sm" data-quitarev>×</button></div>`;
+}
+
 function admTPartido(id){
   const x = {...(torneo().partidos||{})[id], id};
   const eq = torneo().equipos||{};
@@ -1197,6 +1222,14 @@ function admTPartido(id){
     <label>Hora<input name="hora" type="time" value="${esc(x.hora||'')}"></label>
     <label>Goles ${esc(eq[x.a]?.nombre||'A')}<input name="ga" type="number" min="0" value="${x.ga??''}"></label>
     <label>Goles ${esc(eq[x.b]?.nombre||'B')}<input name="gb" type="number" min="0" value="${x.gb??''}"></label>
+    <label>MVP<select name="mvp"><option value="">—</option>${jug.map(j=>opt(j.id,j.nombre+' ('+(eq[j.eq]?.nombre||'')+')',x.mvp||'')).join('')}</select></label>
+    <label>Repetición (.hbr2, hasta 8 MB)<input name="replayFile" type="file" accept=".hbr2,.hbr"></label>
+    ${x.replay?`<label class="full" style="display:flex;gap:8px;align-items:center;text-transform:none"><input type="checkbox" name="replayDel"> Quitar la repetición actual (${esc(x.replay.name)})</label>`:''}
+    <div class="full"><h3 style="margin:8px 0 4px">Goles con minuto</h3>
+      <p class="muted" style="margin:0 0 10px">Si cargás los goles acá, se usan estos para las estadísticas y para la página del partido.</p>
+      <div class="ev-fila muted"><span>Minuto</span><span>Goleador</span><span>Asistencia</span><span></span></div>
+      <div id="f-ev">${(x.eventos||[]).map(e=>filaEvento(jug,eq,e)).join('')}</div>
+      <button class="btn ghost sm" data-act="agregar-evento" style="margin-top:8px">Agregar gol</button></div>
     <div class="full"><h3 style="margin:8px 0 4px">Goles y asistencias</h3>
       <div class="chk-row muted" style="grid-template-columns:1fr 90px 70px 70px"><span>Jugador</span><span>Equipo</span><span>Goles</span><span>Asist.</span></div>
       ${filas||'<p class="muted">Los equipos todavía no tienen jugadores sorteados.</p>'}</div>
@@ -1374,6 +1407,7 @@ document.addEventListener('click', async e=>{
   if (t.dataset.tsub){ ADM.tsub=t.dataset.tsub; return render(); }
   if (t.dataset.deltjug){ if(confirm('¿Quitar este jugador del torneo?')){ await ref('torneo/jugadores/'+t.dataset.deltjug).remove(); toast('Jugador quitado'); } return; }
   if (t.dataset.delequipo){ if(confirm('¿Quitar este equipo?')){ await ref('torneo/equipos/'+t.dataset.delequipo).remove(); toast('Equipo quitado'); } return; }
+  if (t.hasAttribute('data-quitarev')){ t.closest('[data-ev]').remove(); return; }
   if (t.dataset.edittp){ ADM.tedit=t.dataset.edittp; return render(); }
   if (t.dataset.deltp){ ADM.tedit=null; if(confirm('¿Quitar este partido?')){ await ref('torneo/partidos/'+t.dataset.deltp).remove(); toast('Partido quitado'); } return; }
   if (t.dataset.tab){ ADM.tab=t.dataset.tab; ADM.edit=null; return render(); }
@@ -1473,12 +1507,29 @@ document.addEventListener('click', async e=>{
       ADM.auto=null;
       await ref('torneo/picks').remove(); await ref('torneo/sorteo').set({estado:'pendiente'}); toast('Sorteo reiniciado'); render(); }
     if (a==='sortear-fixture'){ if(!confirm('Esto borra los partidos que haya y sortea todo de corrido. ¿Seguimos?')) return; await sortearFixture(); render(); }
+    if (a==='agregar-evento'){ const cont=$('#f-ev'); if(!cont) return;
+      const x=(torneo().partidos||{})[ADM.tedit]||{}; const eq=torneo().equipos||{};
+      const jug=[...jugadoresDeEquipo(x.a).map(j=>({...j,eq:x.a})), ...jugadoresDeEquipo(x.b).map(j=>({...j,eq:x.b}))];
+      cont.insertAdjacentHTML('beforeend', filaEvento(jug,eq,{})); return; }
     if (a==='cancelar-tp'){ ADM.tedit=null; render(); }
     if (a==='guardar-tpartido'){ const f=$('#f-tp'), v=n=>f.querySelector(`[name=${n}]`).value.trim();
-      const o = {ronda:v('ronda'), fecha:v('fecha'), hora:v('hora'),
-        ga: v('ga')===''?null:+v('ga'), gb: v('gb')===''?null:+v('gb'), stats:{}};
+      const o = {ronda:v('ronda'), fecha:v('fecha'), hora:v('hora'), mvp:v('mvp'),
+        ga: v('ga')===''?null:+v('ga'), gb: v('gb')===''?null:+v('gb'), stats:{}, eventos:[]};
       f.querySelectorAll('[data-pg]').forEach(i=>{ const j=i.dataset.pg, g=+i.value||0, as=+f.querySelector(`[data-pa="${j}"]`).value||0;
         if (g||as) o.stats[j]={g,a:as}; });
+      f.querySelectorAll('[data-ev]').forEach(fila=>{ const g=fila.querySelector('[data-eg]').value;
+        if (!g) return;
+        o.eventos.push({min:+fila.querySelector('[data-emin]').value||0, g, a:fila.querySelector('[data-ea]').value||''}); });
+      o.eventos.sort((p,q)=>p.min-q.min);
+      const file = f.querySelector('[name=replayFile]').files[0];
+      const quitar = f.querySelector('[name=replayDel]')?.checked;
+      const prev = (torneo().partidos||{})[ADM.tedit]||{};
+      if (file){ if (file.size > 8e6) return alert('La repetición pesa más de 8 MB.');
+        toast('Subiendo repetición…');
+        await db.ref('replays/'+ADM.tedit).set({name:file.name, data:await fileB64(file)});
+        o.replay = {name:file.name, size:file.size};
+      } else if (quitar){ await db.ref('replays/'+ADM.tedit).remove(); o.replay = null; }
+      else if (prev.replay) o.replay = prev.replay;
       await ref('torneo/partidos/'+ADM.tedit).update(o);
       ADM.tedit=null; toast('Partido guardado'); render(); }
     if (a==='sortear-uno'){ const sigue = await sortearUnPartido(); if(!sigue) toast('El fixture ya está completo'); render(); }
@@ -1520,9 +1571,25 @@ const buscarEquipo = ref => { if(!ref) return null; const r=slugUrl(decodeURICom
   return tEquiposArr().find(e=>e.id===ref) || tEquiposArr().find(e=>slugUrl(e.nombre)===r) || null; };
 const jugadoresDeEquipo = id => tPicksArr().filter(p=>p.equipo===id).map(p=>({id:p.jugador,...tJug(p.jugador)}));
 const ATRIBUTOS = [['sp','Salida / pase'],['po','Posicionamiento'],['pc','Pase / conducción'],['es','Esquineo'],['de','Definición'],['dm','Defensa / marca']];
+function statsDePartido(x){
+  const out = {};
+  const ev = x.eventos||[];
+  if (ev.length){
+    ev.forEach(e=>{ if(e.g){ (out[e.g] ||= {g:0,a:0}).g++; } if(e.a){ (out[e.a] ||= {g:0,a:0}).a++; } });
+    return out;
+  }
+  Object.entries(x.stats||{}).forEach(([id,st])=>{ out[id] = {g:+st.g||0, a:+st.a||0}; });
+  return out;
+}
 function statsTorneoJug(jugId){
   let g=0,a=0,pj=0;
-  tPartidosArr().forEach(x=>{ const st=(x.stats||{})[jugId]; if(st){ g+=+st.g||0; a+=+st.a||0; pj++; } });
+  const miEquipo = (tPicksArr().find(p=>p.jugador===jugId)||{}).equipo;
+  tPartidosArr().forEach(x=>{
+    const st = statsDePartido(x)[jugId];
+    if (st){ g+=st.g; a+=st.a; }
+    const jugado = x.ga!==undefined && x.ga!==null && x.ga!=='';
+    if (jugado && miEquipo && (x.a===miEquipo || x.b===miEquipo)) pj++;
+  });
   return {g,a,pj};
 }
 function cartaJugador(j, opts={}){
@@ -1627,6 +1694,38 @@ function pageTorneoEquipos(){
     return `<a class="equipo" href="#/torneo/equipo/${esc(refEquipo(e))}" style="--eq:${esc(e.color||'#C9CED6')};text-decoration:none;display:block"><h3>${e.logo?`<img src="${esc(e.logo)}" alt="">`:''}${esc(e.nombre)}</h3><ul>${filas}</ul>${camisetasHtml(e)}</a>`;
   }).join('')}</div>`;
 }
+function pageTorneoPartido(id){
+  const x = (torneo().partidos||{})[id];
+  if (!x) return '<p class="muted">No encontramos ese partido.</p><p><a href="#/torneo/fixture">Volver al fixture</a></p>';
+  const eq = torneo().equipos||{};
+  const jugado = x.ga!==undefined && x.ga!==null && x.ga!=='';
+  const lado = k => { const e = eq[x[k]]||{nombre:'?'};
+    return `<div class="lado">${e.logo?`<img src="${esc(e.logo)}" alt="">`:''}<a href="#/torneo/equipo/${esc(refEquipo({id:x[k],...e}))}">${esc(e.nombre)}</a></div>`; };
+  const ev = [...(x.eventos||[])].sort((a,b)=>(+a.min||0)-(+b.min||0));
+  const equipoDe = jid => (tPicksArr().find(p=>p.jugador===jid)||{}).equipo;
+  const linea = ev.length ? `<div class="linea">${ev.map(e=>{
+      const col = eq[equipoDe(e.g)]?.color || 'var(--acento)';
+      return `<div class="ev" style="--eq:${esc(col)}"><div class="min">${esc(e.min||'')}'</div>
+        <div><b>${esc(tJug(e.g).nombre)}</b>${e.a?`<div class="as">asistencia de ${esc(tJug(e.a).nombre)}</div>`:''}</div></div>`;
+    }).join('')}</div>` : '<p class="muted">Todavía no se cargaron los goles con su minuto.</p>';
+  const st = statsDePartido(x);
+  const tabla = Object.keys(st).length ? `<div class="scroll"><table class="tabla"><thead><tr><th class="l">Jugador</th><th class="l">Equipo</th><th>Goles</th><th>Asist.</th></tr></thead><tbody>
+    ${Object.entries(st).sort((a,b)=>b[1].g-a[1].g||b[1].a-a[1].a).map(([jid,v])=>`<tr><td class="l">${esc(tJug(jid).nombre)} ${tierBadge(tJug(jid).tier)}</td>
+      <td class="l">${esc(eq[equipoDe(jid)]?.nombre||'')}</td><td><b>${v.g}</b></td><td>${v.a}</td></tr>`).join('')}
+    </tbody></table></div>` : '';
+  const mvp = x.mvp ? `<div class="mvp"><div>${tierBadge(tJug(x.mvp).tier)}</div>
+      <div><div class="et">MVP del partido</div><div class="nm">${esc(tJug(x.mvp).nombre)}</div>
+      <div class="muted">${esc(eq[equipoDe(x.mvp)]?.nombre||'')}</div></div></div>` : '';
+  const cuando = [x.fecha?fCorta({fecha:x.fecha,hora:x.hora||'00:00'}):'', x.hora||''].filter(Boolean).join(' ');
+  return `<p class="muted" style="margin:0 0 18px"><a href="#/torneo/fixture" style="text-decoration:none">Fixture</a>${x.ronda?' · '+esc(x.ronda):''}${cuando?' · '+esc(cuando):''}</p>
+    <div class="marcador-gde">${lado('a')}<div class="res">${jugado?`${esc(x.ga)} – ${esc(x.gb)}`:'vs'}</div>${lado('b')}</div>
+    ${x.replay?`<div class="btns"><button class="btn ghost" data-replay="${esc(id)}">Descargar repetición</button>
+      <a class="muted" style="align-self:center" href="https://www.haxball.com/replay" target="_blank" rel="noopener">Se mira en haxball.com/replay</a></div>`:''}
+    ${mvp?`<section><h2>MVP</h2>${mvp}</section>`:''}
+    <section><h2>Goles</h2>${linea}</section>
+    ${tabla?`<section><h2>Goles y asistencias</h2>${tabla}</section>`:''}`;
+}
+
 function pageTorneoEquipo(ref){
   const e = buscarEquipo(ref);
   const id = e && e.id;
@@ -1734,10 +1833,10 @@ function cardTorneo(x, conRonda=true){
   const centro = jugado ? `<span class="marcador">${esc(x.ga)}–${esc(x.gb)}</span>` : `<span class="hora">${esc(x.hora||'vs')}</span>`;
   const f = x.fecha ? fCorta({fecha:x.fecha,hora:x.hora||'00:00'}) : 'A confirmar';
   const logo = id => eq[id]?.logo ? `<img src="${esc(eq[id].logo)}" alt="" style="width:26px;height:26px;object-fit:contain;vertical-align:-7px;margin:0 6px">` : '';
-  return `<article class="partido" style="--liga:var(--silver)">
+  return `<a class="partido" href="#/torneo/partido/${esc(x.id)}" style="--liga:var(--silver);text-decoration:none;display:block">
     ${x.fecha||(conRonda&&x.ronda)?`<div class="meta">${x.fecha?`<span>${esc(f)}</span>`:''}${conRonda&&x.ronda?`<span>${esc(x.ronda)}</span>`:''}</div>`:''}
     <div class="enf"><span class="eq">${logo(x.a)}${esc(eq[x.a]?.nombre||'?')}</span>${centro}<span class="eq">${esc(eq[x.b]?.nombre||'?')}${logo(x.b)}</span></div>
-  </article>`;
+  </a>`;
 }
 function fixtureHtml(){
   const ps = tPartidosArr();
@@ -1793,7 +1892,7 @@ function route(){ const h=location.hash.replace(/^#\/?/,''); const [a,b,c]=h.spl
 function render(){
   const r = route();
   const seccion = r.a==='torneo' ? 'torneo' : (['seleccion','calendario','liga','historico','ss'].includes(r.a) ? 'seleccion' : r.a==='admin' ? 'admin' : 'portal');
-  const cur = r.a==='liga' ? 'liga/'+r.b : r.a==='torneo' ? 'torneo'+(r.b==='equipo'?'/equipos':r.b?'/'+r.b:'') : r.a;
+  const cur = r.a==='liga' ? 'liga/'+r.b : r.a==='torneo' ? 'torneo'+(r.b==='equipo'?'/equipos':r.b==='partido'?'/fixture':r.b?'/'+r.b:'') : r.a;
   const link = ([k,t]) => `<a href="#/${k}" class="${cur===k?'on':''}">${esc(t)}</a>`;
   let nav = '';
   if (seccion==='seleccion'){
@@ -1814,7 +1913,7 @@ function render(){
   else if (r.a==='liga') html = pageLiga(r.b);
   else if (r.a==='ss') html = pageSS();
   else if (r.a==='historico') html = pageHistorico();
-  else if (r.a==='torneo') html = r.b==='equipo' ? pageTorneoEquipo(r.c) : pageTorneo(r.b);
+  else if (r.a==='torneo') html = r.b==='equipo' ? pageTorneoEquipo(r.c) : r.b==='partido' ? pageTorneoPartido(r.c) : pageTorneo(r.b);
   else if (r.a==='seleccion') html = pageInicio();
   else html = pagePortal();
   $('#app').innerHTML = html;
