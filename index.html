@@ -1705,8 +1705,24 @@ function pageTorneo(sub){
     ${eqs.length&&capitanes().length?`<section><h2>Capitanes</h2><p class="muted">Son los ${eqs.length} de mejor media, el bombo 1, y va uno por equipo.</p>
       <div class="plantel">${capitanes().map(j=>`<div class="jug"><div><b>${esc(j.nombre)}</b><small>media ${estimada(j)?'≈':''}${mediaEf(j).toFixed(2)}</small></div>${tierBadge(j.tier)}</div>`).join('')}</div></section>`:''}
     ${prox.length?`<section><h2>Próximos partidos</h2><div class="lista">${prox.map(cardTorneo).join('')}</div></section>`:''}
+    <section><h2>Goleadores</h2>${rankingTorneo('g')}</section>
+    <section><h2>Asistencias</h2>${rankingTorneo('a')}</section>
     <section><h2>Anotados</h2>${listaAnotados()}</section>`;
 }
+function rankingTorneo(campo){
+  const eq = torneo().equipos||{};
+  const filas = tJugsArr().map(j=>{
+    const eId = (tPicksArr().find(p=>p.jugador===j.id)||{}).equipo;
+    return {...j, ...statsTorneoJug(j.id), eqNom: eq[eId]?.nombre||'', eqId:eId, eqLogo: eq[eId]?.logo};
+  }).filter(j=>j[campo]>0).sort((a,b)=>b[campo]-a[campo] || b[campo==='g'?'a':'g']-a[campo==='g'?'a':'g'] || a.nombre.localeCompare(b.nombre)).slice(0,12);
+  if (!filas.length) return '<p class="muted">Todavía no hay nada cargado.</p>';
+  return `<div class="scroll"><table class="tabla"><thead><tr><th>#</th><th class="l">Jugador</th><th class="l">Equipo</th><th>PJ</th><th>${campo==='g'?'Goles':'Asist.'}</th></tr></thead><tbody>
+    ${filas.map((j,i)=>`<tr><td>${i+1}</td><td class="l">${esc(j.nombre)} ${tierBadge(j.tier)}</td>
+      <td class="l">${j.eqId?`<a href="#/torneo/equipo/${esc(refEquipo({id:j.eqId,nombre:j.eqNom}))}"><span class="mini">${j.eqLogo?`<img src="${esc(j.eqLogo)}" alt="">`:''}${esc(j.eqNom)}</span></a>`:''}</td>
+      <td>${j.pj}</td><td><b>${j[campo]}</b></td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+
 function listaAnotados(){
   const js = tJugsArr(); if(!js.length) return '<p class="muted">Todavía no hay jugadores anotados.</p>';
   return `<div class="plantel">${js.map(j=>`<div class="jug"><div><b>${esc(j.nombre)}</b><small>${esc(j.discord||'')}</small></div>${tierBadge(j.tier)}</div>`).join('')}</div>`;
