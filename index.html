@@ -1110,6 +1110,19 @@ function admTEquipos(){
   return `<div class="form" style="margin-bottom:14px"><label>Cuántos equipos crear<input id="ne-cant" type="number" min="2" max="8" value="6"></label>
       <div class="full"><button class="btn ghost" data-act="crear-equipos">Crear equipos vacíos</button>
       <p class="muted">Crea los equipos numerados. Después les cambiás el nombre acá abajo.</p></div></div>
+    <div class="form" style="margin-bottom:14px">
+      <h3 class="full">Reemplazar un jugador</h3>
+      <label>Sale<select id="rp-sale"><option value="">—</option>${
+        tEquiposArr().map(e=>`<optgroup label="${esc(e.nombre)}">${jugadoresDeEquipo(e.id).map(j=>`<option value="${esc(j.id)}">${esc(j.nombre)} (${esc(j.tier||'sin tier')})</option>`).join('')}</optgroup>`).join('')
+      }</select></label>
+      <label>Entra<select id="rp-entra"><option value="">—</option>${
+        (()=>{ const usados=new Set(tPicksArr().map(p=>p.jugador));
+          return tJugsArr().filter(j=>!usados.has(j.id)).map(j=>`<option value="${esc(j.id)}">${esc(j.nombre)} (${esc(j.tier||'sin tier')})</option>`).join('')
+            || '<option value="" disabled>No hay jugadores libres, agregalo primero en Jugadores</option>'; })()
+      }</select></label>
+      <div class="full"><button class="btn" data-act="reemplazar-jugador">Reemplazar</button>
+      <p class="muted">El que sale queda libre y mantiene las estadísticas que ya hizo. El que entra arranca de cero.</p></div>
+    </div>
     <div class="lista">${filas||'<p class="muted">Todavía no hay equipos.</p>'}</div>
     ${eqs.length?'<div class="btns"><button class="btn" data-act="guardar-equipos">Guardar equipos</button></div>':''}`;
 }
@@ -1504,6 +1517,17 @@ document.addEventListener('click', async e=>{
     if (a==='crear-equipos'){ const cant=Math.max(2,Math.min(8,+$('#ne-cant').value||6)), up={};
       for(let i=1;i<=cant;i++) up['torneo/equipos/eq'+i]={nombre:'Equipo '+i, color:COLORES[(i-1)%COLORES.length], orden:i};
       await ref('').update(up); toast('Equipos creados'); render(); }
+    if (a==='reemplazar-jugador'){
+      const sale = $('#rp-sale').value, entra = $('#rp-entra').value;
+      if (!sale || !entra) return alert('Elegí quién sale y quién entra.');
+      const pick = tPicksArr().find(p=>p.jugador===sale);
+      if (!pick) return alert('No encontramos a ese jugador en ningún equipo.');
+      const eqNom = (torneo().equipos||{})[pick.equipo]?.nombre||'';
+      const ts = tJug(sale).tier, te = tJug(entra).tier;
+      if (ts !== te && !confirm(`${tJug(entra).nombre} es tier ${te||'sin tier'} y ${tJug(sale).nombre} es ${ts||'sin tier'}. ¿Lo hacemos igual?`)) return;
+      if (!confirm(`¿Sacar a ${tJug(sale).nombre} de ${eqNom} y poner a ${tJug(entra).nombre}?`)) return;
+      await ref('torneo/picks/'+pick.id).update({jugador:entra, ts:Date.now()});
+      toast('Jugador reemplazado'); render(); }
     if (a==='guardar-equipos'){ const up={};
       for (const i of document.querySelectorAll('[data-en]')){ const id=i.dataset.en;
         up[`torneo/equipos/${id}/nombre`]=i.value.trim();
