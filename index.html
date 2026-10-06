@@ -1065,6 +1065,8 @@ function admTorneo(){
       <label class="full">Descripción<input id="tc-desc" value="${esc(c.descripcion||'')}"></label>
       <label>Jugadores por equipo<input id="tc-cupo" type="number" min="2" value="${esc(c.porEquipo||5)}"></label>
       <label>Fechas de la fase de grupos<input id="tc-fechas" type="number" min="1" max="7" value="${esc(c.fechas||4)}"></label>
+      <label>Traspasos desde<input id="tc-tdesde" type="date" value="${esc(c.traspasosDesde||'')}"></label>
+      <label>Traspasos hasta<input id="tc-thasta" type="date" value="${esc(c.traspasosHasta||'')}"></label>
       <label class="full">Formato<textarea id="tc-formato" rows="4">${esc(c.formato||'')}</textarea></label>
       <div class="full"><button class="btn" data-act="guardar-tconfig">Guardar</button></div></div>`;
   }
@@ -1122,6 +1124,14 @@ function admTEquipos(){
       }</select></label>
       <div class="full"><button class="btn" data-act="reemplazar-jugador">Reemplazar</button>
       <p class="muted">El que sale queda libre y mantiene las estadísticas que ya hizo. El que entra arranca de cero.</p></div>
+    </div>
+    <div class="form" style="margin-bottom:14px">
+      <h3 class="full">Intercambiar jugadores entre equipos</h3>
+      ${['ix-1','ix-2'].map((id,i)=>`<label>Jugador ${i+1}<select id="${id}"><option value="">—</option>${
+        tEquiposArr().map(e=>`<optgroup label="${esc(e.nombre)}">${jugadoresDeEquipo(e.id).map(j=>`<option value="${esc(j.id)}">${esc(j.nombre)} (${esc(j.tier||'sin tier')})</option>`).join('')}</optgroup>`).join('')
+      }</select></label>`).join('')}
+      <div class="full"><button class="btn" data-act="intercambiar-jugadores">Intercambiar</button>
+      <p class="muted">Cada uno pasa al equipo del otro. Queda registrado en la página de traspasos.</p></div>
     </div>
     <div class="lista">${filas||'<p class="muted">Todavía no hay equipos.</p>'}</div>
     ${eqs.length?'<div class="btns"><button class="btn" data-act="guardar-equipos">Guardar equipos</button></div>':''}`;
@@ -1527,7 +1537,22 @@ document.addEventListener('click', async e=>{
       if (ts !== te && !confirm(`${tJug(entra).nombre} es tier ${te||'sin tier'} y ${tJug(sale).nombre} es ${ts||'sin tier'}. ¿Lo hacemos igual?`)) return;
       if (!confirm(`¿Sacar a ${tJug(sale).nombre} de ${eqNom} y poner a ${tJug(entra).nombre}?`)) return;
       await ref('torneo/picks/'+pick.id).update({jugador:entra, ts:Date.now()});
+      await db.ref('prime/torneo/traspasos').push({tipo:'reemplazo', sale, entra, equipo:pick.equipo, ts:Date.now()});
       toast('Jugador reemplazado'); render(); }
+    if (a==='intercambiar-jugadores'){
+      const x1 = $('#ix-1').value, x2 = $('#ix-2').value;
+      if (!x1 || !x2 || x1===x2) return alert('Elegí dos jugadores distintos.');
+      const p1 = tPicksArr().find(p=>p.jugador===x1), p2 = tPicksArr().find(p=>p.jugador===x2);
+      if (!p1 || !p2) return alert('Alguno de los dos no está en un equipo.');
+      if (p1.equipo === p2.equipo) return alert('Los dos están en el mismo equipo.');
+      const eqs2 = torneo().equipos||{};
+      const t1 = tJug(x1).tier, t2 = tJug(x2).tier;
+      if (t1 !== t2 && !confirm(`${tJug(x1).nombre} es tier ${t1||'sin tier'} y ${tJug(x2).nombre} es ${t2||'sin tier'}. ¿Los intercambiamos igual?`)) return;
+      if (!confirm(`¿${tJug(x1).nombre} pasa a ${eqs2[p2.equipo]?.nombre} y ${tJug(x2).nombre} a ${eqs2[p1.equipo]?.nombre}?`)) return;
+      await ref('torneo/picks/'+p1.id).update({jugador:x2});
+      await ref('torneo/picks/'+p2.id).update({jugador:x1});
+      await db.ref('prime/torneo/traspasos').push({tipo:'intercambio', sale:x1, entra:x2, equipo:p2.equipo, equipo2:p1.equipo, ts:Date.now()});
+      toast('Jugadores intercambiados'); render(); }
     if (a==='guardar-equipos'){ const up={};
       for (const i of document.querySelectorAll('[data-en]')){ const id=i.dataset.en;
         up[`torneo/equipos/${id}/nombre`]=i.value.trim();
@@ -1596,7 +1621,8 @@ document.addEventListener('click', async e=>{
         up[`torneo/partidos/${id}/gb`] = gb===''?null:+gb; });
       await ref('').update(up); toast('Resultados guardados'); }
     if (a==='guardar-treglas'){ await ref('torneo/reglas').set($('#t-reglas').value.trim()||null); toast('Reglas guardadas'); }
-    if (a==='guardar-tconfig'){ await ref('torneo/config').update({nombre:$('#tc-nombre').value.trim(), descripcion:$('#tc-desc').value.trim(), porEquipo:+$('#tc-cupo').value||5, fechas:+$('#tc-fechas').value||4, formato:$('#tc-formato').value.trim()});
+    if (a==='guardar-tconfig'){ await ref('torneo/config').update({nombre:$('#tc-nombre').value.trim(), descripcion:$('#tc-desc').value.trim(), porEquipo:+$('#tc-cupo').value||5, fechas:+$('#tc-fechas').value||4, formato:$('#tc-formato').value.trim(),
+        traspasosDesde:$('#tc-tdesde').value, traspasosHasta:$('#tc-thasta').value});
       toast('Datos guardados'); }
     if (a==='guardar-tabla'){ const v=document.querySelector(`[data-tabla="${t.dataset.id}"]`).value.trim(); await ref('tablas/'+t.dataset.id).set(v||null); toast('Tabla guardada'); }
   } catch(err){ if(a==='login'||a==='login-google'){ const el=$('#lg-err'); if(el) el.textContent='No se pudo entrar: revisá el email y la contraseña.'; } else fail(err); }
@@ -1702,7 +1728,7 @@ function tablaTorneo(){
 }
 
 function subnavTorneo(sub){
-  const items = [['','Resumen'],['equipos','Equipos'],['sorteo','Sorteo'],['fixture','Fixture'],['reglas','Reglas']];
+  const items = [['','Resumen'],['equipos','Equipos'],['sorteo','Sorteo'],['fixture','Fixture'],['traspasos','Traspasos'],['reglas','Reglas']];
   return `<div class="subnav">${items.map(([k,t])=>`<a href="#/torneo${k?'/'+k:''}" class="${(sub||'')===k?'on':''}">${esc(t)}</a>`).join('')}</div>`;
 }
 function headerTorneo(sub){
@@ -1716,6 +1742,7 @@ function pageTorneo(sub){
   if (sub==='sorteo') return headerTorneo(sub)+pageTorneoSorteo();
   if (sub==='fixture') return headerTorneo(sub)+pageTorneoFixture();
   if (sub==='reglas') return headerTorneo(sub)+pageTorneoReglas();
+  if (sub==='traspasos') return headerTorneo(sub)+pageTorneoTraspasos();
   const js = tJugsArr(), eqs = tEquiposArr(), picks = tPicksArr(), st = (torneo().sorteo||{}).estado||'pendiente';
   const falta = sinTier();
   const completo = eqs.length && picks.length >= eqs.length * (+tConfig().porEquipo||4);
@@ -1729,6 +1756,10 @@ function pageTorneo(sub){
       <div class="dato"><div class="muted">Sorteo</div><div class="v" style="font-size:1.2rem;line-height:1.6">${estado}</div><div class="muted">${picks.length} elegidos</div></div>
       ${falta.length?`<div class="dato"><div class="muted">Sin tier</div><div class="v warn">${falta.length}</div><div class="muted">${esc(falta.map(j=>j.nombre).join(', '))}</div></div>`:''}
     </div>
+    ${(()=>{ const v=ventanaTraspasos(); if(!v||v.estado==='cerrada') return '';
+      return `<div class="avisos" style="margin-top:26px"><div class="aviso">${v.estado==='abierta'
+        ? `<b>Mercado de traspasos abierto</b> hasta el ${esc(v.hasta)}.`
+        : `El mercado de traspasos abre el <b>${esc(v.desde)}</b> y cierra el <b>${esc(v.hasta)}</b>.`} <a href="#/torneo/traspasos">Ver traspasos</a></div></div>`; })()}
     ${eqs.length&&capitanes().length?`<section><h2>Capitanes</h2><p class="muted">Son los ${eqs.length} de mejor media, el bombo 1, y va uno por equipo.</p>
       <div class="plantel">${capitanes().map(j=>`<div class="jug"><div><b>${esc(j.nombre)}</b><small>media ${estimada(j)?'≈':''}${mediaEf(j).toFixed(2)}</small></div>${tierBadge(j.tier)}</div>`).join('')}</div></section>`:''}
     ${prox.length?`<section><h2>Próximos partidos</h2><div class="lista">${prox.map(cardTorneo).join('')}</div></section>`:''}
@@ -1736,6 +1767,18 @@ function pageTorneo(sub){
     <section><h2>Asistencias</h2>${rankingTorneo('a')}</section>
     <section><h2>Anotados</h2>${listaAnotados()}</section>`;
 }
+const tTraspasos = () => Object.entries(torneo().traspasos||{}).map(([id,x])=>({id,...x})).sort((a,b)=>(b.ts||0)-(a.ts||0));
+function ventanaTraspasos(){
+  const c = tConfig();
+  if (!c.traspasosDesde && !c.traspasosHasta) return null;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const d = c.traspasosDesde ? new Date(c.traspasosDesde+'T00:00:00') : null;
+  const h = c.traspasosHasta ? new Date(c.traspasosHasta+'T23:59:59') : null;
+  const estado = (d && hoy < d) ? 'proxima' : (h && Date.now() > h.getTime()) ? 'cerrada' : 'abierta';
+  const fmt = x => x ? `${pad(x.getDate())}/${pad(x.getMonth()+1)}` : '';
+  return {estado, desde:fmt(d), hasta:fmt(h)};
+}
+
 function rankingTorneo(campo){
   const eq = torneo().equipos||{};
   const filas = tJugsArr().map(j=>{
@@ -1796,6 +1839,37 @@ function pageTorneoPartido(id){
     ${mvp?`<section><h2>MVP</h2>${mvp}</section>`:''}
     <section><h2>Goles</h2>${linea}</section>
     ${tabla?`<section><h2>Goles y asistencias</h2>${tabla}</section>`:''}`;
+}
+
+function pageTorneoTraspasos(){
+  const v = ventanaTraspasos();
+  const eq = torneo().equipos||{};
+  const cartel = !v ? '<p class="muted">La organización todavía no definió la ventana de traspasos.</p>'
+    : v.estado==='abierta' ? `<div class="aviso"><b>Mercado abierto</b> hasta el ${esc(v.hasta||'cierre que avise la organización')}. Los cambios los hace la organización con el acuerdo de los dos capitanes.</div>`
+    : v.estado==='proxima' ? `<div class="aviso">El mercado abre el <b>${esc(v.desde)}</b> y cierra el <b>${esc(v.hasta)}</b>.</div>`
+    : `<div class="aviso">El mercado cerró el <b>${esc(v.hasta)}</b>. No se pueden hacer más cambios.</div>`;
+  const movs = tTraspasos();
+  const lista = movs.length ? `<div class="lista">${movs.map(m=>{
+      const f = m.ts ? new Date(m.ts) : null;
+      const cuando = f ? `${pad(f.getDate())}/${pad(f.getMonth()+1)} ${pad(f.getHours())}:${pad(f.getMinutes())}` : '';
+      const destino = eq[m.equipo]?.nombre||'';
+      const origen = m.equipo2 ? eq[m.equipo2]?.nombre||'' : '';
+      return `<article class="partido" style="--liga:var(--acento)">
+        <div class="meta"><span>${esc(cuando)}</span><span>${m.tipo==='intercambio'?'Intercambio':'Reemplazo'}</span></div>
+        <div class="enf"><span class="eq">${esc(tJug(m.sale).nombre)} ${tierBadge(tJug(m.sale).tier)}</span>
+          <span class="hora">→</span>
+          <span class="eq nos">${esc(tJug(m.entra).nombre)} ${tierBadge(tJug(m.entra).tier)}</span></div>
+        <div class="extra muted">${esc(destino)}${origen?` · con ${esc(origen)}`:''}</div>
+      </article>`;
+    }).join('')}</div>` : '<p class="muted">Todavía no hubo movimientos.</p>';
+  return `${cartel}
+    <section><h2>Cómo funciona</h2><ul class="reglas">
+      <li>Cada equipo puede mover como máximo un jugador.</li>
+      <li>El que entra tiene que ser del mismo tier que el que sale.</li>
+      <li>Los dos capitanes tienen que estar de acuerdo y lo aprueba la organización.</li>
+      <li>Lo que hizo cada jugador antes del cambio queda en sus estadísticas.</li>
+    </ul></section>
+    <section><h2>Movimientos</h2>${lista}</section>`;
 }
 
 function pageTorneoEquipo(ref){
@@ -1971,7 +2045,7 @@ function render(){
     const sel = [['seleccion','Inicio'],['calendario','Calendario'],...(DATA?ligasArr().map(l=>['liga/'+l.id,l.nombre]):[]),['historico','Histórico'],['ss','Guía del SS']];
     nav = `<a class="volver" href="#/">← Secciones</a><span class="navsep"></span><span class="navsec">Selección</span>${sel.map(link).join('')}`;
   } else if (seccion==='torneo'){
-    const tor = [['torneo','Resumen'],['torneo/equipos','Equipos'],['torneo/sorteo','Sorteo'],['torneo/fixture','Fixture'],['torneo/reglas','Reglas']];
+    const tor = [['torneo','Resumen'],['torneo/equipos','Equipos'],['torneo/sorteo','Sorteo'],['torneo/fixture','Fixture'],['torneo/traspasos','Traspasos'],['torneo/reglas','Reglas']];
     nav = `<a class="volver" href="#/">← Secciones</a><span class="navsep"></span><span class="navsec">Torneo interno</span>${tor.map(link).join('')}`;
   } else if (seccion==='admin'){
     nav = `<a class="volver" href="#/">← Secciones</a>`;
