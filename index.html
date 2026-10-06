@@ -265,9 +265,9 @@ table.tabla{width:100%;border-collapse:collapse;font-size:.97rem}
 .marcador-gde .lado a{text-decoration:none;font-family:var(--display);font-weight:900;font-size:clamp(1.3rem,3vw,2.2rem);text-align:center;line-height:1.05}
 .marcador-gde .res{font-family:var(--display);font-weight:900;font-size:clamp(2.6rem,7vw,4.4rem);line-height:1;white-space:nowrap}
 .linea{display:grid;gap:10px;max-width:640px}
-.ev{display:grid;grid-template-columns:62px 1fr;gap:14px;align-items:center;background:linear-gradient(160deg,#141821 0%,#0C0F14 75%);
+.ev{display:grid;grid-template-columns:74px 1fr;gap:14px;align-items:center;background:linear-gradient(160deg,#141821 0%,#0C0F14 75%);
   border:1px solid var(--line);border-left:3px solid var(--eq,var(--acento));border-radius:12px;padding:12px 16px}
-.ev .min{font-family:var(--display);font-weight:900;font-size:1.5rem;color:var(--acento);text-align:center}
+.ev .min{font-family:var(--display);font-weight:900;font-size:1.4rem;color:var(--acento);text-align:center;white-space:nowrap}
 .ev .as{color:var(--muted);font-size:.93rem}
 .mvp{display:flex;align-items:center;gap:16px;background:linear-gradient(160deg,#20222B 0%,#0C0F14 72%);
   border:1px solid var(--warn);border-radius:16px;padding:18px 22px;max-width:460px}
@@ -1145,6 +1145,17 @@ function rondasTodosContraTodos(ids){
 const mezclar = arr => arr.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
 const esperar = ms => new Promise(r=>setTimeout(r,ms));
 
+function aSegundos(txt){
+  const t = String(txt||'').trim().replace(',',':').replace('.',':');
+  if (!t) return 0;
+  if (t.includes(':')){ const [m,sg] = t.split(':'); return (+m||0)*60 + (+sg||0); }
+  return (+t||0)*60;
+}
+const mostrarMin = e => {
+  const t = String(e.min??'').trim();
+  if (!t) return '';
+  return t.includes(':') ? t : t+"'";
+};
 const clavePar = (a,b) => [a,b].sort().join('|');
 function puedeCompletar(restantes, jugados){
   if (restantes.length < 2) return true;
@@ -1207,7 +1218,7 @@ function opcionesJugadores(jug, eq, sel, vacio){
 }
 function filaEvento(jug, eq, e={}){
   return `<div class="ev-fila" data-ev>
-    <input type="number" min="0" data-emin value="${esc(e.min??'')}" aria-label="Minuto">
+    <input type="text" inputmode="numeric" data-emin value="${esc(e.min??'')}" placeholder="7:12" aria-label="Minuto">
     <select data-eg aria-label="Goleador">${opcionesJugadores(jug,eq,e.g,'—')}</select>
     <select data-ea aria-label="Asistencia">${opcionesJugadores(jug,eq,e.a,'Sin asistencia')}</select>
     <label style="flex-direction:row;align-items:center;gap:5px;text-transform:none;letter-spacing:0"><input type="checkbox" data-eec ${e.ec?'checked':''}> En contra</label>
@@ -1528,9 +1539,10 @@ document.addEventListener('click', async e=>{
         if (g||as) o.stats[j]={g,a:as}; });
       f.querySelectorAll('[data-ev]').forEach(fila=>{ const g=fila.querySelector('[data-eg]').value;
         if (!g) return;
-        o.eventos.push({min:+fila.querySelector('[data-emin]').value||0, g, a:fila.querySelector('[data-ea]').value||'',
+        const txtMin = fila.querySelector('[data-emin]').value.trim();
+        o.eventos.push({min:txtMin, seg:aSegundos(txtMin), g, a:fila.querySelector('[data-ea]').value||'',
           ec:fila.querySelector('[data-eec]').checked||false, ced:fila.querySelector('[data-eced]').checked||false}); });
-      o.eventos.sort((p,q)=>p.min-q.min);
+      o.eventos.sort((p,q)=>(p.seg||0)-(q.seg||0));
       const file = f.querySelector('[name=replayFile]').files[0];
       const quitar = f.querySelector('[name=replayDel]')?.checked;
       const prev = (torneo().partidos||{})[ADM.tedit]||{};
@@ -1716,12 +1728,12 @@ function pageTorneoPartido(id){
   const jugado = x.ga!==undefined && x.ga!==null && x.ga!=='';
   const lado = k => { const e = eq[x[k]]||{nombre:'?'};
     return `<div class="lado">${e.logo?`<img src="${esc(e.logo)}" alt="">`:''}<a href="#/torneo/equipo/${esc(refEquipo({id:x[k],...e}))}">${esc(e.nombre)}</a></div>`; };
-  const ev = [...(x.eventos||[])].sort((a,b)=>(+a.min||0)-(+b.min||0));
+  const ev = [...(x.eventos||[])].sort((a,b)=>(a.seg??aSegundos(a.min))-(b.seg??aSegundos(b.min)));
   const equipoDe = jid => (tPicksArr().find(p=>p.jugador===jid)||{}).equipo;
   const linea = ev.length ? `<div class="linea">${ev.map(e=>{
       const col = eq[equipoDe(e.g)]?.color || 'var(--acento)';
       const etiquetas = [e.ec?'<span class="tag bad">en contra</span>':'', e.ced?'<span class="tag">cedido</span>':''].filter(Boolean).join(' ');
-      return `<div class="ev" style="--eq:${esc(col)}"><div class="min">${esc(e.min||'')}'</div>
+      return `<div class="ev" style="--eq:${esc(col)}"><div class="min">${esc(mostrarMin(e))}</div>
         <div><b>${esc(tJug(e.g).nombre)}</b> ${etiquetas}${e.a?`<div class="as">asistencia de ${esc(tJug(e.a).nombre)}</div>`:''}</div></div>`;
     }).join('')}</div>` : '<p class="muted">Todavía no se cargaron los goles con su minuto.</p>';
   const st = statsDePartido(x);
