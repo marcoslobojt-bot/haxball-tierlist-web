@@ -273,7 +273,7 @@ table.tabla{width:100%;border-collapse:collapse;font-size:.97rem}
   border:1px solid var(--warn);border-radius:16px;padding:18px 22px;max-width:460px}
 .mvp .et{color:var(--warn);text-transform:uppercase;letter-spacing:.16em;font-size:.76rem;font-weight:700}
 .mvp .nm{font-family:var(--display);font-weight:900;font-size:2rem;line-height:1}
-.ev-fila{display:grid;grid-template-columns:80px 1fr 1fr 40px;gap:8px;align-items:center;margin-bottom:8px}
+.ev-fila{display:grid;grid-template-columns:76px minmax(140px,1fr) minmax(140px,1fr) auto auto 40px;gap:9px;align-items:center;margin-bottom:9px}
 /* cartas de jugador */
 .cartas{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:18px}
 .carta{position:relative;overflow:hidden;background:linear-gradient(165deg,#1A1F28 0%,#0A0D12 72%);
@@ -1198,11 +1198,20 @@ async function sortearFixture(){
   toast('Fixture sorteado');
 }
 
+function opcionesJugadores(jug, eq, sel, vacio){
+  const enPartido = new Set(jug.map(j=>j.id));
+  const otros = tJugsArr().filter(j=>!enPartido.has(j.id));
+  return `<option value="">${esc(vacio)}</option>
+    <optgroup label="Del partido">${jug.map(j=>opt(j.id,j.nombre+' ('+(eq[j.eq]?.nombre||'')+')',sel||'')).join('')}</optgroup>
+    <optgroup label="Cedidos de otros equipos">${otros.map(j=>opt(j.id,j.nombre,sel||'')).join('')}</optgroup>`;
+}
 function filaEvento(jug, eq, e={}){
   return `<div class="ev-fila" data-ev>
     <input type="number" min="0" data-emin value="${esc(e.min??'')}" aria-label="Minuto">
-    <select data-eg aria-label="Goleador"><option value="">—</option>${jug.map(j=>opt(j.id,j.nombre+' ('+(eq[j.eq]?.nombre||'')+')',e.g||'')).join('')}</select>
-    <select data-ea aria-label="Asistencia"><option value="">Sin asistencia</option>${jug.map(j=>opt(j.id,j.nombre,e.a||'')).join('')}</select>
+    <select data-eg aria-label="Goleador">${opcionesJugadores(jug,eq,e.g,'—')}</select>
+    <select data-ea aria-label="Asistencia">${opcionesJugadores(jug,eq,e.a,'Sin asistencia')}</select>
+    <label style="flex-direction:row;align-items:center;gap:5px;text-transform:none;letter-spacing:0"><input type="checkbox" data-eec ${e.ec?'checked':''}> En contra</label>
+    <label style="flex-direction:row;align-items:center;gap:5px;text-transform:none;letter-spacing:0"><input type="checkbox" data-eced ${e.ced?'checked':''}> Cedido</label>
     <button class="btn danger sm" data-quitarev>×</button></div>`;
 }
 
@@ -1227,7 +1236,7 @@ function admTPartido(id){
     ${x.replay?`<label class="full" style="display:flex;gap:8px;align-items:center;text-transform:none"><input type="checkbox" name="replayDel"> Quitar la repetición actual (${esc(x.replay.name)})</label>`:''}
     <div class="full"><h3 style="margin:8px 0 4px">Goles con minuto</h3>
       <p class="muted" style="margin:0 0 10px">Si cargás los goles acá, se usan estos para las estadísticas y para la página del partido.</p>
-      <div class="ev-fila muted"><span>Minuto</span><span>Goleador</span><span>Asistencia</span><span></span></div>
+      <div class="ev-fila muted"><span>Minuto</span><span>Goleador</span><span>Asistencia</span><span>En contra</span><span>Cedido</span><span></span></div>
       <div id="f-ev">${(x.eventos||[]).map(e=>filaEvento(jug,eq,e)).join('')}</div>
       <button class="btn ghost sm" data-act="agregar-evento" style="margin-top:8px">Agregar gol</button></div>
     <div class="full"><h3 style="margin:8px 0 4px">Goles y asistencias</h3>
@@ -1519,7 +1528,8 @@ document.addEventListener('click', async e=>{
         if (g||as) o.stats[j]={g,a:as}; });
       f.querySelectorAll('[data-ev]').forEach(fila=>{ const g=fila.querySelector('[data-eg]').value;
         if (!g) return;
-        o.eventos.push({min:+fila.querySelector('[data-emin]').value||0, g, a:fila.querySelector('[data-ea]').value||''}); });
+        o.eventos.push({min:+fila.querySelector('[data-emin]').value||0, g, a:fila.querySelector('[data-ea]').value||'',
+          ec:fila.querySelector('[data-eec]').checked||false, ced:fila.querySelector('[data-eced]').checked||false}); });
       o.eventos.sort((p,q)=>p.min-q.min);
       const file = f.querySelector('[name=replayFile]').files[0];
       const quitar = f.querySelector('[name=replayDel]')?.checked;
@@ -1571,11 +1581,16 @@ const buscarEquipo = ref => { if(!ref) return null; const r=slugUrl(decodeURICom
   return tEquiposArr().find(e=>e.id===ref) || tEquiposArr().find(e=>slugUrl(e.nombre)===r) || null; };
 const jugadoresDeEquipo = id => tPicksArr().filter(p=>p.equipo===id).map(p=>({id:p.jugador,...tJug(p.jugador)}));
 const ATRIBUTOS = [['sp','Salida / pase'],['po','Posicionamiento'],['pc','Pase / conducción'],['es','Esquineo'],['de','Definición'],['dm','Defensa / marca']];
-function statsDePartido(x){
+function statsDePartido(x, conCedidos=true){
   const out = {};
   const ev = x.eventos||[];
   if (ev.length){
-    ev.forEach(e=>{ if(e.g){ (out[e.g] ||= {g:0,a:0}).g++; } if(e.a){ (out[e.a] ||= {g:0,a:0}).a++; } });
+    ev.forEach(e=>{
+      if (e.ced && !conCedidos) return;
+      if (e.g && !e.ec){ (out[e.g] ||= {g:0,a:0}).g++; }
+      if (e.g && e.ec){ (out[e.g] ||= {g:0,a:0}); out[e.g].ec = (out[e.g].ec||0)+1; }
+      if (e.a){ (out[e.a] ||= {g:0,a:0}).a++; }
+    });
     return out;
   }
   Object.entries(x.stats||{}).forEach(([id,st])=>{ out[id] = {g:+st.g||0, a:+st.a||0}; });
@@ -1585,7 +1600,7 @@ function statsTorneoJug(jugId){
   let g=0,a=0,pj=0;
   const miEquipo = (tPicksArr().find(p=>p.jugador===jugId)||{}).equipo;
   tPartidosArr().forEach(x=>{
-    const st = statsDePartido(x)[jugId];
+    const st = statsDePartido(x,false)[jugId];
     if (st){ g+=st.g; a+=st.a; }
     const jugado = x.ga!==undefined && x.ga!==null && x.ga!=='';
     if (jugado && miEquipo && (x.a===miEquipo || x.b===miEquipo)) pj++;
@@ -1705,13 +1720,14 @@ function pageTorneoPartido(id){
   const equipoDe = jid => (tPicksArr().find(p=>p.jugador===jid)||{}).equipo;
   const linea = ev.length ? `<div class="linea">${ev.map(e=>{
       const col = eq[equipoDe(e.g)]?.color || 'var(--acento)';
+      const etiquetas = [e.ec?'<span class="tag bad">en contra</span>':'', e.ced?'<span class="tag">cedido</span>':''].filter(Boolean).join(' ');
       return `<div class="ev" style="--eq:${esc(col)}"><div class="min">${esc(e.min||'')}'</div>
-        <div><b>${esc(tJug(e.g).nombre)}</b>${e.a?`<div class="as">asistencia de ${esc(tJug(e.a).nombre)}</div>`:''}</div></div>`;
+        <div><b>${esc(tJug(e.g).nombre)}</b> ${etiquetas}${e.a?`<div class="as">asistencia de ${esc(tJug(e.a).nombre)}</div>`:''}</div></div>`;
     }).join('')}</div>` : '<p class="muted">Todavía no se cargaron los goles con su minuto.</p>';
   const st = statsDePartido(x);
   const tabla = Object.keys(st).length ? `<div class="scroll"><table class="tabla"><thead><tr><th class="l">Jugador</th><th class="l">Equipo</th><th>Goles</th><th>Asist.</th></tr></thead><tbody>
     ${Object.entries(st).sort((a,b)=>b[1].g-a[1].g||b[1].a-a[1].a).map(([jid,v])=>`<tr><td class="l">${esc(tJug(jid).nombre)} ${tierBadge(tJug(jid).tier)}</td>
-      <td class="l">${esc(eq[equipoDe(jid)]?.nombre||'')}</td><td><b>${v.g}</b></td><td>${v.a}</td></tr>`).join('')}
+      <td class="l">${esc(eq[equipoDe(jid)]?.nombre||'')}</td><td><b>${v.g}</b>${v.ec?` <span class="muted">(${v.ec} en contra)</span>`:''}</td><td>${v.a}</td></tr>`).join('')}
     </tbody></table></div>` : '';
   const mvp = x.mvp ? `<div class="mvp"><div>${tierBadge(tJug(x.mvp).tier)}</div>
       <div><div class="et">MVP del partido</div><div class="nm">${esc(tJug(x.mvp).nombre)}</div>
